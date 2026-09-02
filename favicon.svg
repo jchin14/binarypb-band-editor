@@ -12,5 +12,5 @@
   <rect width="64" height="64" rx="15" fill="url(#bg)"/>
   <rect width="64" height="64" rx="15" fill="url(#sheen)"/>
   <rect x="1" y="1" width="62" height="62" rx="14" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
-  <text x="32" y="41" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="24" letter-spacing="-1" fill="#f5f6fa">n<tspan fill="#7dd3fc">78</tspan></text>
+  <text x="32" y="37" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="14" letter-spacing="-0.5" fill="#f5f6fa">n<tspan fill="#7dd3fc">78</tspan><tspan fill="#f5f6fa">+n</tspan><tspan fill="#7dd3fc">78</tspan></text>
 </svg>
