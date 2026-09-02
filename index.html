@@ -222,10 +222,18 @@
         #helpBtn:active:hover {
             background-color: #d97706;
         }
-        #helpBtn svg {
-            width: 15px;
-            height: 15px;
-            fill: #1a1a1a;
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #1a1a1a;
+            color: #f59e0b;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
         }
         .buttons {
             display: flex;
@@ -588,7 +596,7 @@
             </div>
             <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
             <button id="helpBtn" title="Show help" onclick="showHelpModal()">
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm.93 11.5H7.07v-1.6h1.86v1.6ZM8 3.1a2.6 2.6 0 0 0-2.6 2.6h1.4A1.2 1.2 0 1 1 8 6.9c-.66 0-1.2.54-1.2 1.2v1h1.4v-.6A2.6 2.6 0 0 0 8 3.1Z"/></svg>
+                <span class="help-icon">?</span>
                 <span>Help</span>
             </button>
             <a class="github-link" href="https://github.com/jchin14/binarypb-band-editor" target="_blank" rel="noopener" title="View source on GitHub">
@@ -1222,7 +1230,7 @@
                 </div></div>
             <table class="main-table" style="border-collapse: collapse;">
                 <tr>
-                    <th><button title="Add a new combo" onclick="addNewComboToFirstGroup()">+</button> Filtered Combos: ${countCombos(filteredGroups)}/${countCombos(decodedData.ComboGroups)}</th>
+                    <th><button title="Add a new combo" onclick="addNewComboToFirstGroup()">Add combo</button> Filtered Combos: ${countCombos(filteredGroups)}/${countCombos(decodedData.ComboGroups)}</th>
                     <th>
                         <label title="Select every combo in the current filtered result"><input type="checkbox" ${allVisibleSelected ? "checked" : ""} onchange="toggleSelectAllFiltered(this.checked)"> Select all filtered</label><br>
                         <button title="Copy every selected combo" onclick="copySelectedCombos()">Copy selected (${selectedCombos.size})</button>
