@@ -14,36 +14,41 @@
             --dark-grey: #333;
             --less-dark-grey: #282828;
             --grey: #474747;
-            
+
             --white: #c0c0c0;
             --offwhite: #ddd;
             --lightred: #ff9fac;
             --darkred: red;
             --blue: #0c68bf;
+            --accent: #3b82f6;
+            --radius: 8px;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
-        body { font-family: Arial, sans-serif; margin: 0px; background-color: light-dark(var(--white), var(--darker-grey)); }
+        * { box-sizing: border-box; }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0px; background-color: light-dark(var(--white), var(--darker-grey)); }
         table { border-collapse: collapse; margin: auto; }
         th, td { border: 1px solid light-dark(var(--offwhite), var(--grey)); padding: 0px 4px; text-align: left; }
-        button { margin: 0px; background-color: light-dark(var(--offwhite), #474747);}
-        select { background-color: light-dark(var(--offwhite), var(--grey));}
-        input[type='text'] { background-color: light-dark(var(--offwhite), #474747);}
-        input[type='number'] { background-color: light-dark(var(--offwhite), #474747)}
+        button { margin: 0px; background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); transition: background-color 0.15s ease, transform 0.1s ease; }
+        select { background-color: light-dark(var(--offwhite), var(--grey)); border-radius: var(--radius); }
+        input[type='text'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
+        input[type='number'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
         .band-input { width: 60px; }
         h3, h4 { color: var(--white), var(--dark-grey)}
 
         @media (prefers-color-scheme: light) {
             button, select, input::file-selector-button, input[type='text'] {
-                border-bottom: 1px solid black;
-                border-right: 1px solid black;
-                border-top: 1px solid white;
-                border-left: 1px solid white;
+                border: 1px solid #ccc;
+            }
+            button:hover:enabled {
+                background-color: #eee;
+                cursor: pointer;
             }
             button:active:hover {
-                border-bottom: 1px solid white;
-                border-right: 1px solid white;
-                border-top: 1px solid black;
-                border-left: 1px solid black;
+                background-color: #ddd;
+                cursor: pointer;
+                transform: scale(0.97);
             }
         }
 
@@ -58,6 +63,7 @@
             button:active:hover {
                 background-color: #2b2b2b;
                 cursor: pointer;
+                transform: scale(0.97);
             }
         }
         /* Modal styles */
@@ -70,8 +76,89 @@
             
         }
         .combo-table {
-            
+            width: auto;
             border: 0px;
+        }
+        @media (min-width: 769px) {
+            .main-table {
+                table-layout: fixed;
+                width: 100%;
+            }
+            .main-table th:first-child,
+            .main-table td:first-child {
+                width: auto;
+            }
+            .main-table th:last-child,
+            .main-table td:last-child {
+                width: 200px;
+            }
+        }
+        .combo-number {
+            display: inline-block;
+            background-color: var(--accent);
+            color: white;
+            font-weight: 700;
+            font-size: 9px;
+            padding: 0px 5px;
+            border-radius: 999px;
+            margin-bottom: 1px;
+        }
+        .combo-col-titles th {
+            background-color: light-dark(var(--blue), var(--dark-grey));
+            color: white;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            text-align: left;
+            padding: 2px 5px;
+        }
+        .combo-col-band, .combo-col-bw, .combo-col-feat {
+            white-space: nowrap;
+        }
+        .combo-col-titles .combo-col-dl,
+        .combo-col-titles .combo-col-ul {
+            width: 260px;
+        }
+        .cc-feature-cell {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2px;
+            width: 260px;
+            box-sizing: border-box;
+        }
+        .combo-table select[name="FeatureId"] {
+            width: 70%;
+            min-width: 120px;
+        }
+        .combo-table td, .combo-table th {
+            padding: 1px 4px;
+            font-size: 13px;
+        }
+        .combo-table tr {
+            line-height: 1.15;
+        }
+        .cc-index {
+            display: inline-block;
+            min-width: 12px;
+            margin-left: 4px;
+            color: light-dark(var(--grey), var(--white));
+            font-size: 10px;
+            font-weight: 700;
+            margin-right: 2px;
+        }
+        .ran-nr {
+            background-color: light-dark(#e3f0ff, #16324a);
+        }
+        .ran-lte {
+            background-color: light-dark(#eaf7ea, #17331c);
+        }
+        .color-row {
+            outline: 2px solid #f59e0b !important;
+            outline-offset: -2px;
+        }
+        .main-table .combo-row:nth-of-type(even) {
+            background-color: light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.03));
         }
         .band-input {
             width: 45px;
@@ -80,11 +167,73 @@
         .header {
             display: flex;
             align-items: center;
-            position: fixed;
+            position: sticky;
+            top: 0;
             background-color: light-dark(var(--blue), var(--dark-grey));
             width: 100%;
             justify-content: space-evenly;
             color: light-dark(white, white);
+            box-shadow: var(--shadow);
+            padding: 6px 12px;
+            gap: 8px;
+            z-index: 2;
+        }
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background-color: light-dark(rgba(255,255,255,0.15), rgba(255,255,255,0.1));
+            border: 1px solid light-dark(rgba(255,255,255,0.4), rgba(255,255,255,0.25));
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+        .github-link:hover {
+            background-color: light-dark(rgba(255,255,255,0.3), rgba(255,255,255,0.2));
+            transform: scale(1.03);
+        }
+        .github-link svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+        #helpBtn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background-color: #f59e0b;
+            border: 1px solid #d97706;
+            color: #1a1a1a;
+            font-weight: 700;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        #helpBtn:hover:enabled {
+            background-color: #fbbf24;
+            transform: scale(1.03);
+        }
+        #helpBtn:active:hover {
+            background-color: #d97706;
+        }
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #1a1a1a;
+            color: #f59e0b;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
         }
         .buttons {
             display: flex;
@@ -96,7 +245,7 @@
             margin: 0 0 8px;
         }
         #tableContainer {
-            padding-top: 24px;
+            padding-top: 12px;
         }
         .btn-json {
             margin-bottom: 5px;
@@ -118,11 +267,46 @@
             padding: 20px;
             padding-bottom: 60px;
             border: 1px solid light-dark(var(--grey), var(--grey));
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             width: 30%;
             max-height: 70vh; /* Set maximum height to 70% of viewport height */
         }
         #customFeatureModal .modal-content h3, #customFeatureModal .modal-content h4 {
             margin-top: 0;
+        }
+        .help-modal-content {
+            width: 50%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .help-section h4 {
+            margin-bottom: 4px;
+            color: light-dark(var(--blue), #8bb7f0);
+        }
+        .help-section ul {
+            margin-top: 4px;
+            padding-left: 20px;
+        }
+        .help-section li {
+            margin-bottom: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .help-section code {
+            background-color: light-dark(var(--offwhite), var(--grey));
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+        .help-more {
+            margin: 8px 0 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid light-dark(var(--offwhite), var(--grey));
+            font-size: 13px;
+        }
+        .help-more a {
+            color: light-dark(var(--blue), #8bb7f0);
+            font-weight: 600;
         }
         #customFeatureModal .modal-content label {
             display: inline-block;
@@ -146,9 +330,6 @@
         }
         .btn-rem {
             color: light-dark(var(--darkred), var(--lightred));
-        }
-        .color-row {
-            background-color: light-dark(#aaa, #212121) !important;
         }
         .binarypbInfo {
             margin: 5px;
@@ -187,7 +368,6 @@
                 width: 100%;
             }
             .binarypbInfo {
-                margin-top: 80px;
                 flex-direction: column;
                 align-items: stretch; /* Stretch items to full width */
                 height: auto; /* Let height be determined by content */
@@ -200,7 +380,6 @@
             .header {
                 flex-direction: column;
                 align-items: stretch; /* Stretch items to full width */
-                position: absolute; /* Change from fixed to allow scrolling with page */
                 height: auto; /* Let height be determined by content */
             }
             #bandFilter {
@@ -231,6 +410,14 @@
                 order: -3; /* Attempt to move pagination up if needed or style differently */
                 width: 120px;
                 padding: 0px;
+            }
+            .github-link {
+                order: -2;
+                justify-content: center;
+                margin: 4px 0;
+            }
+            .help-modal-content {
+                width: 90%;
             }
             .main-table th, .main-table td {
                 font-size: 13px;
@@ -272,12 +459,18 @@
             }
 
             .combo-table td {
-                width: 100% !important; 
-                padding: 8px 0; 
-                border: none; 
-                display: flex; 
-                flex-wrap: wrap; 
-                align-items: center; 
+                width: 100% !important;
+                padding: 8px 0;
+                border: none;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .combo-col-titles {
+                display: none !important;
+            }
+            .cc-feature-cell {
+                width: 100% !important;
             }
             .combodirind {
             display: flex !important;
@@ -402,8 +595,14 @@
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
             </div>
             <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
-
-            
+            <button id="helpBtn" title="Show help" onclick="showHelpModal()">
+                <span class="help-icon">?</span>
+                <span>Help</span>
+            </button>
+            <a class="github-link" href="https://github.com/jchin14/binarypb-band-editor" target="_blank" rel="noopener" title="View source on GitHub">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                <span>View on GitHub</span>
+            </a>
         </div>
         <div id="tableContainer"></div>
         
@@ -523,6 +722,57 @@
                 <button class="modalbtn" onclick="closeComboTransferModal()">Cancel</button>
                 <button class="modalbtn" id="comboTransferAction" onclick="importComboText()">Import rows</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal for help -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content help-modal-content">
+            <h3>Help</h3>
+            <p class="help-more">For more detailed instructions, visit the <a href="https://github.com/jchin14/binarypb-band-editor#readme" target="_blank" rel="noopener">GitHub README</a>.</p>
+            <div class="help-section">
+                <h4>Top bar</h4>
+                <ul>
+                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
+                    <li><b>Filter box</b> — show only combos matching a band string, e.g. <code>1+3+7C+n78</code>.</li>
+                    <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
+                    <li><b>Clear</b> — reset the band filter.</li>
+                    <li><b>Pagination / Per page</b> — move between pages of combos and control how many are shown at once.</li>
+                    <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
+                    <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb.</li>
+                    <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone.</li>
+                    <li><b>Clear session</b> — wipes the locally stored session and reloads the page.</li>
+                    <li><b>View on GitHub</b> — opens the project's source code repository.</li>
+                </ul>
+            </div>
+            <div class="help-section">
+                <h4>Info bar</h4>
+                <ul>
+                    <li><b>Integrity field + Save/Restore</b> — some binarypbs require an integrity value matching your phone's active file; Save/Restore store it in a cookie for next time.</li>
+                    <li><b>FeatureSets: Add</b> — define custom downlink/uplink feature sets to reference from combos.</li>
+                    <li><b>FeatureSets: JSON</b> — view/edit the raw feature set lists as JSON.</li>
+                    <li><b>Apply BM 65k patch</b> — patches the bitmask so all bands are allowed (Pixel 7/8; always 0 on Pixel 9).</li>
+                    <li><b>Integrity ON/OFF</b> — toggles whether the integrity field is present in the file.</li>
+                </ul>
+            </div>
+            <div class="help-section">
+                <h4>Combo table</h4>
+                <ul>
+                    <li><b>+ (Filtered Combos header)</b> — adds a new combo to the first group.</li>
+                    <li><b>Select all filtered</b> — selects every combo currently shown by the filter.</li>
+                    <li><b>Copy selected / Copy selected as text</b> — duplicates selected combos, or copies them as portable text for pasting elsewhere.</li>
+                    <li><b>Import combo text</b> — paste previously copied combo text into this profile.</li>
+                    <li><b>Remove selected / Remove all except selected</b> — bulk delete combos.</li>
+                    <li><b>bcsNr / bcsIntraENDC / bcsEutra</b> — per-group band combination set bitmasks.</li>
+                    <li><b>powerClass</b> — 0 for default, 1 to force Power Class 2.</li>
+                    <li><b>intraEndc</b> — intra-band EN-DC support flag for the group.</li>
+                    <li><b>Band input, ↑ ↓ - +</b> — edit a component carrier's band, reorder, remove, or add another band to the combo.</li>
+                    <li><b>DL / UL feature dropdowns, - +</b> — assign or remove feature sets (MIMO/bandwidth class) per carrier direction.</li>
+                    <li><b>Checkbox (per row)</b> — selects this combo for the bulk actions above.</li>
+                    <li><b>JSON / Copy / Remove (per row)</b> — edit this combo as raw JSON, duplicate it, or delete it.</li>
+                </ul>
+            </div>
+            <button class="modalbtn" onclick="closeHelpModal()">Close</button>
         </div>
     </div>
 
@@ -980,7 +1230,7 @@
                 </div></div>
             <table class="main-table" style="border-collapse: collapse;">
                 <tr>
-                    <th><button title="Add a new combo" onclick="addNewComboToFirstGroup()">+</button> Filtered Combos: ${countCombos(filteredGroups)}/${countCombos(decodedData.ComboGroups)}</th>
+                    <th><button title="Add a new combo" onclick="addNewComboToFirstGroup()">Add combo</button> Filtered Combos: ${countCombos(filteredGroups)}/${countCombos(decodedData.ComboGroups)}</th>
                     <th>
                         <label title="Select every combo in the current filtered result"><input type="checkbox" ${allVisibleSelected ? "checked" : ""} onchange="toggleSelectAllFiltered(this.checked)"> Select all filtered</label><br>
                         <button title="Copy every selected combo" onclick="copySelectedCombos()">Copy selected (${selectedCombos.size})</button>
@@ -1000,11 +1250,15 @@
             let paginatedGroups = filteredGroups.slice(start, end);
             globalIndexMap = filteredGroups.map(group => decodedData.ComboGroups.indexOf(group)); // Map to real indices
 
+            let comboCounter = start;
+            let titlesRendered = false;
+
             paginatedGroups.forEach((group, localGroupIndex) => {
                 let realGroupIndex = globalIndexMap[start + localGroupIndex]; // Map local to real index
 
                 group.combo.forEach((combo, localComboIndex) => {
-                    let innerTableHTML = `<table class="combo-table" style="width: 100%; border-collapse: collapse;">
+                    comboCounter++;
+                    let innerTableHTML = `<div class="combo-number">#${comboCounter}</div>
                         <div class="groupheader">
                             <span>bcsNr:</span>
                             <input type="text" name="bcsNr" value="${parseBcs(group.comboHeader.bcsNr)}" oninput="updateBcs(${realGroupIndex},this.value,'bcsNr')">
@@ -1019,16 +1273,30 @@
                             </select>
                             <span>intraEndc:</span>
                             <input type="text" name="intraBandEnDcSupport" value="${group.comboHeader.intraBandEnDcSupport}" oninput="updateComboHeader(${realGroupIndex},this.value,'intraBandEnDcSupport')">
-                        </div>`;
+                        </div>
+                        <table class="combo-table" style="border-collapse: collapse;">`;
+
+                    if (!titlesRendered) {
+                        titlesRendered = true;
+                        innerTableHTML += `<tr class="combo-col-titles">
+                            <th class="combo-col-band">Band</th>
+                            <th class="bandextraind combo-col-bw">BW</th>
+                            <th class="bandextraind combo-col-feat">F#</th>
+                            <th class="combodirind"></th>
+                            <th class="combo-col-dl">Download (DL)</th>
+                            <th class="combodirind"></th>
+                            <th class="combo-col-ul">Upload (UL)</th>
+                        </tr>`;
+                    }
 
                     combo.cc.forEach((ccItem, ccIndex) => {
                         let hasUlFeature = ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0;
 
                         // 0 is NR, 1 is LTE (Later on LTE DL = 1, LTE UL = 2)
                         let ran = (ccItem.band > 10000) ? 0 : 1;
-                        let rowClass = hasUlFeature ? "color-row" : ""; // Apply class if ulFeaturePerCCIds exists
+                        let rowClass = (ran === 0 ? "ran-nr" : "ran-lte") + (hasUlFeature ? " color-row" : ""); // Tint by RAN type, highlight if ulFeaturePerCCIds exists
 
-                        let bandInput = `<input name="band-input" type="text" class="band-input" value="${bandParseInt(ccItem.bwClassDL,ccItem.band)}"
+                        let bandInput = `<span class="cc-index">${ccIndex + 1}</span><input name="band-input" type="text" class="band-input" value="${bandParseInt(ccItem.bwClassDL,ccItem.band)}"
                             onchange="updateBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, this.value)" />`;
 
                         // Show "+" button only for the last band input
@@ -1117,13 +1385,13 @@
                         }
 
                         innerTableHTML += `<tr class="${rowClass}">
-                            <td width="135">${bandInput} ${moveBandUpBtn} ${moveBandDownBtn} ${removeBandBtn} ${addBandBtn}</td>
-                            <td class="bandextraind" width="40">${ccItem.bwClassDL}/${ccItem.bwClassUL}</td>
-                            <td class="bandextraind" width="30">${ccItem.dlFeatureIndex}/${ccItem.ulFeatureIndex}</td>
+                            <td class="combo-col-band">${bandInput} ${moveBandUpBtn} ${moveBandDownBtn} ${removeBandBtn} ${addBandBtn}</td>
+                            <td class="bandextraind combo-col-bw">${ccItem.bwClassDL}/${ccItem.bwClassUL}</td>
+                            <td class="bandextraind combo-col-feat">${ccItem.dlFeatureIndex}/${ccItem.ulFeatureIndex}</td>
                             <td class="combodirind"><span class="groupheader">DL</span></td>
-                            <td width="500" >${dlFeaturePerCCIdsHTML}</td>
+                            <td class="combo-col-dl"><div class="cc-feature-cell">${dlFeaturePerCCIdsHTML}</div></td>
                             <td class="combodirind"><span class="groupheader">UL</span></td>
-                            <td>${ulFeaturePerCCIdsHTML}</td>
+                            <td class="combo-col-ul"><div class="cc-feature-cell">${ulFeaturePerCCIdsHTML}</div></td>
                         </tr>`;
                     });
 
@@ -1948,6 +2216,14 @@
             document.getElementById("jsonModal").style.display = "none";
         }
 
+        function showHelpModal() {
+            document.getElementById("helpModal").style.display = "block";
+        }
+
+        function closeHelpModal() {
+            document.getElementById("helpModal").style.display = "none";
+        }
+
         function showCustomFeatureModal() {
             document.getElementById("customFeatureModal").style.display = "block";
         }
@@ -2144,8 +2420,9 @@ chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/$
 name=Pixel Uecapa mod
 version=${curr_time}
 versionCode=${(Date.now()).toString().slice(9)}
-author=pixel-pb
-description=Replaces ${originalFilename}. Generated with nxij.github.io/pixel-pb.`;
+author=jchin14
+description=Replaces ${originalFilename}. Generated with https://binarypb.jchin.au.
+support=https://github.com/jchin14/binarypb-band-editor`;
 
             // Convert base64 to binary
             const binaryData = atob(sampleBase64);
