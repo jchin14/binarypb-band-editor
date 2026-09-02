@@ -76,8 +76,22 @@
             
         }
         .combo-table {
-            
+            width: auto;
             border: 0px;
+        }
+        @media (min-width: 769px) {
+            .main-table {
+                table-layout: fixed;
+                width: 100%;
+            }
+            .main-table th:first-child,
+            .main-table td:first-child {
+                width: auto;
+            }
+            .main-table th:last-child,
+            .main-table td:last-child {
+                width: 200px;
+            }
         }
         .band-input {
             width: 45px;
@@ -86,7 +100,8 @@
         .header {
             display: flex;
             align-items: center;
-            position: fixed;
+            position: sticky;
+            top: 0;
             background-color: light-dark(var(--blue), var(--dark-grey));
             width: 100%;
             justify-content: space-evenly;
@@ -130,7 +145,7 @@
             margin: 0 0 8px;
         }
         #tableContainer {
-            padding-top: 24px;
+            padding-top: 12px;
         }
         .btn-json {
             margin-bottom: 5px;
@@ -159,6 +174,38 @@
         }
         #customFeatureModal .modal-content h3, #customFeatureModal .modal-content h4 {
             margin-top: 0;
+        }
+        .help-modal-content {
+            width: 50%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .help-section h4 {
+            margin-bottom: 4px;
+            color: light-dark(var(--blue), #8bb7f0);
+        }
+        .help-section ul {
+            margin-top: 4px;
+            padding-left: 20px;
+        }
+        .help-section li {
+            margin-bottom: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .help-section code {
+            background-color: light-dark(var(--offwhite), var(--grey));
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+        .help-more {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid light-dark(var(--offwhite), var(--grey));
+            font-size: 13px;
+        }
+        .help-more a {
+            color: light-dark(var(--blue), #8bb7f0);
         }
         #customFeatureModal .modal-content label {
             display: inline-block;
@@ -223,7 +270,6 @@
                 width: 100%;
             }
             .binarypbInfo {
-                margin-top: 80px;
                 flex-direction: column;
                 align-items: stretch; /* Stretch items to full width */
                 height: auto; /* Let height be determined by content */
@@ -236,7 +282,6 @@
             .header {
                 flex-direction: column;
                 align-items: stretch; /* Stretch items to full width */
-                position: absolute; /* Change from fixed to allow scrolling with page */
                 height: auto; /* Let height be determined by content */
             }
             #bandFilter {
@@ -272,6 +317,9 @@
                 order: -2;
                 justify-content: center;
                 margin: 4px 0;
+            }
+            .help-modal-content {
+                width: 90%;
             }
             .main-table th, .main-table td {
                 font-size: 13px;
@@ -443,6 +491,7 @@
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
             </div>
             <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
+            <button id="helpBtn" title="Show help" onclick="showHelpModal()">? Help</button>
             <a class="github-link" href="https://github.com/jchin14/binarypb-band-editor" target="_blank" rel="noopener" title="View source on GitHub">
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
                 <span>View on GitHub</span>
@@ -566,6 +615,57 @@
                 <button class="modalbtn" onclick="closeComboTransferModal()">Cancel</button>
                 <button class="modalbtn" id="comboTransferAction" onclick="importComboText()">Import rows</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal for help -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content help-modal-content">
+            <h3>Help</h3>
+            <div class="help-section">
+                <h4>Top bar</h4>
+                <ul>
+                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
+                    <li><b>Filter box</b> — show only combos matching a band string, e.g. <code>1+3+7C+n78</code>.</li>
+                    <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
+                    <li><b>Clear</b> — reset the band filter.</li>
+                    <li><b>Pagination / Per page</b> — move between pages of combos and control how many are shown at once.</li>
+                    <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
+                    <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb.</li>
+                    <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone.</li>
+                    <li><b>Clear session</b> — wipes the locally stored session and reloads the page.</li>
+                    <li><b>View on GitHub</b> — opens the project's source code repository.</li>
+                </ul>
+            </div>
+            <div class="help-section">
+                <h4>Info bar</h4>
+                <ul>
+                    <li><b>Integrity field + Save/Restore</b> — some binarypbs require an integrity value matching your phone's active file; Save/Restore store it in a cookie for next time.</li>
+                    <li><b>FeatureSets: Add</b> — define custom downlink/uplink feature sets to reference from combos.</li>
+                    <li><b>FeatureSets: JSON</b> — view/edit the raw feature set lists as JSON.</li>
+                    <li><b>Apply BM 65k patch</b> — patches the bitmask so all bands are allowed (Pixel 7/8; always 0 on Pixel 9).</li>
+                    <li><b>Integrity ON/OFF</b> — toggles whether the integrity field is present in the file.</li>
+                </ul>
+            </div>
+            <div class="help-section">
+                <h4>Combo table</h4>
+                <ul>
+                    <li><b>+ (Filtered Combos header)</b> — adds a new combo to the first group.</li>
+                    <li><b>Select all filtered</b> — selects every combo currently shown by the filter.</li>
+                    <li><b>Copy selected / Copy selected as text</b> — duplicates selected combos, or copies them as portable text for pasting elsewhere.</li>
+                    <li><b>Import combo text</b> — paste previously copied combo text into this profile.</li>
+                    <li><b>Remove selected / Remove all except selected</b> — bulk delete combos.</li>
+                    <li><b>bcsNr / bcsIntraENDC / bcsEutra</b> — per-group band combination set bitmasks.</li>
+                    <li><b>powerClass</b> — 0 for default, 1 to force Power Class 2.</li>
+                    <li><b>intraEndc</b> — intra-band EN-DC support flag for the group.</li>
+                    <li><b>Band input, ↑ ↓ - +</b> — edit a component carrier's band, reorder, remove, or add another band to the combo.</li>
+                    <li><b>DL / UL feature dropdowns, - +</b> — assign or remove feature sets (MIMO/bandwidth class) per carrier direction.</li>
+                    <li><b>Checkbox (per row)</b> — selects this combo for the bulk actions above.</li>
+                    <li><b>JSON / Copy / Remove (per row)</b> — edit this combo as raw JSON, duplicate it, or delete it.</li>
+                </ul>
+            </div>
+            <p class="help-more">For more detailed instructions, visit the <a href="https://github.com/jchin14/binarypb-band-editor#readme" target="_blank" rel="noopener">GitHub README</a>.</p>
+            <button class="modalbtn" onclick="closeHelpModal()">Close</button>
         </div>
     </div>
 
@@ -1164,9 +1264,9 @@
                             <td class="bandextraind" width="40">${ccItem.bwClassDL}/${ccItem.bwClassUL}</td>
                             <td class="bandextraind" width="30">${ccItem.dlFeatureIndex}/${ccItem.ulFeatureIndex}</td>
                             <td class="combodirind"><span class="groupheader">DL</span></td>
-                            <td width="500" >${dlFeaturePerCCIdsHTML}</td>
+                            <td width="220">${dlFeaturePerCCIdsHTML}</td>
                             <td class="combodirind"><span class="groupheader">UL</span></td>
-                            <td>${ulFeaturePerCCIdsHTML}</td>
+                            <td width="220">${ulFeaturePerCCIdsHTML}</td>
                         </tr>`;
                     });
 
@@ -1989,6 +2089,14 @@
 
         function closeModal() {
             document.getElementById("jsonModal").style.display = "none";
+        }
+
+        function showHelpModal() {
+            document.getElementById("helpModal").style.display = "block";
+        }
+
+        function closeHelpModal() {
+            document.getElementById("helpModal").style.display = "none";
         }
 
         function showCustomFeatureModal() {
