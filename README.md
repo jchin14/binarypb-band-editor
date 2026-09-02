@@ -1,16 +1,16 @@
 # Pixel BinaryPB Bulk Editor
 
-An offline, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is a self-contained copy of [Pixel PB](https://nxij.github.io/pixel-pb/) with bulk row-selection tools.
+A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is a copy of [Pixel PB](https://nxij.github.io/pixel-pb/) with bulk row-selection tools.
 
-## Run it offline
+## Run or host it
 
-Keep these files together in one folder:
+Deploy the repository as a static site, or open `index.html` locally. Keep these files together in the same directory:
 
 - `index.html`
 - `protobuf.min.js`
 - `jszip.min.js`
 
-Open `index.html` in a modern desktop browser, then load a `.binarypb` using the file picker. No web server or internet connection is required.
+Open `index.html` in a modern desktop browser, then load a `.binarypb` using the file picker. The editor has no server-side component; it runs entirely in the browser.
 
 ## Editing rows
 
@@ -44,4 +44,4 @@ The output filename should match the profile the phone loads (for example, `VHA.
 - Back up the original `.binarypb` before changing anything.
 - This editor changes UE capability advertisements; it cannot add RF hardware support or make a network schedule an unsupported CA combination.
 - Feature references and carrier-specific profile headers can matter. Test one small change at a time and keep a known-good recovery copy.
-- This project is an independent offline wrapper/modification of Pixel PB. Refer to the upstream project for the underlying editor and format support.
+- This project is an independent wrapper/modification of Pixel PB. Refer to the upstream project for the underlying editor and format support.
