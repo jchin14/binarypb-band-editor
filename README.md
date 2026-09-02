@@ -45,12 +45,46 @@ Use the filename field and either:
 
 The output filename should match the profile the phone loads (for example, `VHA.binarypb`) when the goal is to replace that profile.
 
+## Rooted-phone workflow
+
+The following examples use Android Platform Tools (`adb`) and a rooted phone with `su` available (for example, through Magisk). Replace `VHA.binarypb` with the profile your phone loads.
+
+1. Confirm the phone is connected and inspect available profiles:
+
+   ```sh
+   adb devices
+   adb shell su -c 'ls -l /vendor/firmware/uecapconfig'
+   ```
+
+2. Pull and back up the active profile. Using `exec-out` with `su` avoids file-permission issues:
+
+   ```sh
+   adb exec-out su -c 'cat /vendor/firmware/uecapconfig/VHA.binarypb' > VHA.stock.binarypb
+   cp VHA.stock.binarypb VHA.binarypb
+   ```
+
+3. Load `VHA.binarypb` in the editor, make the change, and download the generated Magisk `.zip`.
+
+4. Copy the zip to the phone and install it in the Magisk app, then reboot:
+
+   ```sh
+   adb push your-module.zip /sdcard/Download/
+   ```
+
+   In Magisk, choose **Modules → Install from storage**, select the uploaded zip, then reboot.
+
+Do not directly overwrite `/vendor/firmware/uecapconfig/...`: the vendor partition is normally read-only and direct writes are unnecessarily risky. A Magisk module overlays the file and can be disabled or removed to return to stock behavior.
+
 ## Important notes
 
 - Back up the original `.binarypb` before changing anything.
 - This editor changes UE capability advertisements; it cannot add RF hardware support or make a network schedule an unsupported CA combination.
 - Feature references and carrier-specific profile headers can matter. Test one small change at a time and keep a known-good recovery copy.
 - This project is an independent wrapper/modification of Pixel PB. Refer to the upstream project for the underlying editor and format support.
+
+## Contributing
+
+Pull requests are welcome. Please keep changes focused, describe what you tested, and avoid committing private carrier profiles or device identifiers.
 
 ## Special thanks
 
