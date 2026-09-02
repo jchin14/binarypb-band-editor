@@ -98,41 +98,52 @@
             background-color: var(--accent);
             color: white;
             font-weight: 700;
-            font-size: 12px;
-            padding: 2px 10px;
+            font-size: 9px;
+            padding: 0px 5px;
             border-radius: 999px;
-            margin-bottom: 4px;
+            margin-bottom: 1px;
         }
         .combo-col-titles th {
             background-color: light-dark(var(--blue), var(--dark-grey));
             color: white;
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.03em;
             text-align: left;
-            padding: 3px 6px;
+            padding: 2px 5px;
         }
-        .combo-col-band {
-            width: 1%;
+        .combo-col-band, .combo-col-bw, .combo-col-feat {
             white-space: nowrap;
         }
-        .combo-col-bw, .combo-col-feat {
-            width: 1%;
-            white-space: nowrap;
+        .combo-col-titles .combo-col-dl,
+        .combo-col-titles .combo-col-ul {
+            width: 260px;
         }
-        .combo-col-dl, .combo-col-ul {
-            width: 45%;
+        .cc-feature-cell {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2px;
+            width: 260px;
+            box-sizing: border-box;
         }
         .combo-table select[name="FeatureId"] {
             width: 70%;
-            min-width: 140px;
+            min-width: 120px;
+        }
+        .combo-table td, .combo-table th {
+            padding: 1px 4px;
+            font-size: 13px;
+        }
+        .combo-table tr {
+            line-height: 1.15;
         }
         .cc-index {
             display: inline-block;
-            min-width: 14px;
+            min-width: 12px;
             margin-left: 4px;
             color: light-dark(var(--grey), var(--white));
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             margin-right: 2px;
         }
@@ -449,6 +460,9 @@
             }
             .combo-col-titles {
                 display: none !important;
+            }
+            .cc-feature-cell {
+                width: 100% !important;
             }
             .combodirind {
             display: flex !important;
@@ -1229,14 +1243,14 @@
             globalIndexMap = filteredGroups.map(group => decodedData.ComboGroups.indexOf(group)); // Map to real indices
 
             let comboCounter = start;
+            let titlesRendered = false;
 
             paginatedGroups.forEach((group, localGroupIndex) => {
                 let realGroupIndex = globalIndexMap[start + localGroupIndex]; // Map local to real index
 
                 group.combo.forEach((combo, localComboIndex) => {
                     comboCounter++;
-                    let innerTableHTML = `<div class="combo-number">Combo #${comboCounter}</div>
-                        <table class="combo-table" style="border-collapse: collapse;">
+                    let innerTableHTML = `<div class="combo-number">#${comboCounter}</div>
                         <div class="groupheader">
                             <span>bcsNr:</span>
                             <input type="text" name="bcsNr" value="${parseBcs(group.comboHeader.bcsNr)}" oninput="updateBcs(${realGroupIndex},this.value,'bcsNr')">
@@ -1252,15 +1266,20 @@
                             <span>intraEndc:</span>
                             <input type="text" name="intraBandEnDcSupport" value="${group.comboHeader.intraBandEnDcSupport}" oninput="updateComboHeader(${realGroupIndex},this.value,'intraBandEnDcSupport')">
                         </div>
-                        <tr class="combo-col-titles">
+                        <table class="combo-table" style="border-collapse: collapse;">`;
+
+                    if (!titlesRendered) {
+                        titlesRendered = true;
+                        innerTableHTML += `<tr class="combo-col-titles">
                             <th class="combo-col-band">Band</th>
                             <th class="bandextraind combo-col-bw">BW</th>
-                            <th class="bandextraind combo-col-feat">Feat#</th>
+                            <th class="bandextraind combo-col-feat">F#</th>
                             <th class="combodirind"></th>
                             <th class="combo-col-dl">Download (DL)</th>
                             <th class="combodirind"></th>
                             <th class="combo-col-ul">Upload (UL)</th>
                         </tr>`;
+                    }
 
                     combo.cc.forEach((ccItem, ccIndex) => {
                         let hasUlFeature = ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0;
@@ -1362,9 +1381,9 @@
                             <td class="bandextraind combo-col-bw">${ccItem.bwClassDL}/${ccItem.bwClassUL}</td>
                             <td class="bandextraind combo-col-feat">${ccItem.dlFeatureIndex}/${ccItem.ulFeatureIndex}</td>
                             <td class="combodirind"><span class="groupheader">DL</span></td>
-                            <td class="combo-col-dl">${dlFeaturePerCCIdsHTML}</td>
+                            <td class="combo-col-dl"><div class="cc-feature-cell">${dlFeaturePerCCIdsHTML}</div></td>
                             <td class="combodirind"><span class="groupheader">UL</span></td>
-                            <td class="combo-col-ul">${ulFeaturePerCCIdsHTML}</td>
+                            <td class="combo-col-ul"><div class="cc-feature-cell">${ulFeaturePerCCIdsHTML}</div></td>
                         </tr>`;
                     });
 
