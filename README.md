@@ -1,4 +1,4 @@
-# Pixel BinaryPB Bulk Editor
+# BinaryPB Band Editor
 
 A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is a copy of [Pixel PB](https://nxij.github.io/pixel-pb/) with bulk row-selection tools.
 

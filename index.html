@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark" />
-    <title>Pixel Uecapa pb Editor</title>
+    <title>BinaryPB Band Editor</title>
     <script src="protobuf.min.js"></script>
     <script src="jszip.min.js"></script>
     <style>
@@ -770,7 +770,7 @@
             }));
 
             const text = JSON.stringify({
-                format: 'pixel-binarypb-bulk-editor/1',
+                format: 'binarypb-band-editor/1',
                 dlFeaturePerCCList: JSON.parse(JSON.stringify(decodedData.dlFeaturePerCCList || [])),
                 ulFeaturePerCCList: JSON.parse(JSON.stringify(decodedData.ulFeaturePerCCList || [])),
                 combos
@@ -836,8 +836,8 @@
                 return;
             }
 
-            if (transfer.format !== 'pixel-binarypb-bulk-editor/1' || !Array.isArray(transfer.combos)) {
-                alert('This text is not a compatible Pixel BinaryPB Bulk Editor export.');
+            if (transfer.format !== 'binarypb-band-editor/1' || !Array.isArray(transfer.combos)) {
+                alert('This text is not a compatible BinaryPB Band Editor export.');
                 return;
             }
 
