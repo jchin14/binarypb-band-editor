@@ -14,36 +14,41 @@
             --dark-grey: #333;
             --less-dark-grey: #282828;
             --grey: #474747;
-            
+
             --white: #c0c0c0;
             --offwhite: #ddd;
             --lightred: #ff9fac;
             --darkred: red;
             --blue: #0c68bf;
+            --accent: #3b82f6;
+            --radius: 8px;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
-        body { font-family: Arial, sans-serif; margin: 0px; background-color: light-dark(var(--white), var(--darker-grey)); }
+        * { box-sizing: border-box; }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0px; background-color: light-dark(var(--white), var(--darker-grey)); }
         table { border-collapse: collapse; margin: auto; }
         th, td { border: 1px solid light-dark(var(--offwhite), var(--grey)); padding: 0px 4px; text-align: left; }
-        button { margin: 0px; background-color: light-dark(var(--offwhite), #474747);}
-        select { background-color: light-dark(var(--offwhite), var(--grey));}
-        input[type='text'] { background-color: light-dark(var(--offwhite), #474747);}
-        input[type='number'] { background-color: light-dark(var(--offwhite), #474747)}
+        button { margin: 0px; background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); transition: background-color 0.15s ease, transform 0.1s ease; }
+        select { background-color: light-dark(var(--offwhite), var(--grey)); border-radius: var(--radius); }
+        input[type='text'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
+        input[type='number'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
         .band-input { width: 60px; }
         h3, h4 { color: var(--white), var(--dark-grey)}
 
         @media (prefers-color-scheme: light) {
             button, select, input::file-selector-button, input[type='text'] {
-                border-bottom: 1px solid black;
-                border-right: 1px solid black;
-                border-top: 1px solid white;
-                border-left: 1px solid white;
+                border: 1px solid #ccc;
+            }
+            button:hover:enabled {
+                background-color: #eee;
+                cursor: pointer;
             }
             button:active:hover {
-                border-bottom: 1px solid white;
-                border-right: 1px solid white;
-                border-top: 1px solid black;
-                border-left: 1px solid black;
+                background-color: #ddd;
+                cursor: pointer;
+                transform: scale(0.97);
             }
         }
 
@@ -58,6 +63,7 @@
             button:active:hover {
                 background-color: #2b2b2b;
                 cursor: pointer;
+                transform: scale(0.97);
             }
         }
         /* Modal styles */
@@ -85,6 +91,34 @@
             width: 100%;
             justify-content: space-evenly;
             color: light-dark(white, white);
+            box-shadow: var(--shadow);
+            padding: 6px 12px;
+            gap: 8px;
+            z-index: 2;
+        }
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background-color: light-dark(rgba(255,255,255,0.15), rgba(255,255,255,0.1));
+            border: 1px solid light-dark(rgba(255,255,255,0.4), rgba(255,255,255,0.25));
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+        .github-link:hover {
+            background-color: light-dark(rgba(255,255,255,0.3), rgba(255,255,255,0.2));
+            transform: scale(1.03);
+        }
+        .github-link svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
         }
         .buttons {
             display: flex;
@@ -118,6 +152,8 @@
             padding: 20px;
             padding-bottom: 60px;
             border: 1px solid light-dark(var(--grey), var(--grey));
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             width: 30%;
             max-height: 70vh; /* Set maximum height to 70% of viewport height */
         }
@@ -231,6 +267,11 @@
                 order: -3; /* Attempt to move pagination up if needed or style differently */
                 width: 120px;
                 padding: 0px;
+            }
+            .github-link {
+                order: -2;
+                justify-content: center;
+                margin: 4px 0;
             }
             .main-table th, .main-table td {
                 font-size: 13px;
@@ -402,9 +443,10 @@
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
             </div>
             <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
-            <a href="https://github.com/jchin14/binarypb-band-editor" target="_blank" rel="noopener" title="View on GitHub">GitHub</a>
-
-
+            <a class="github-link" href="https://github.com/jchin14/binarypb-band-editor" target="_blank" rel="noopener" title="View source on GitHub">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                <span>View on GitHub</span>
+            </a>
         </div>
         <div id="tableContainer"></div>
         
