@@ -1,6 +1,12 @@
 # BinaryPB Band Editor
 
-A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is a copy of [Pixel PB](https://nxij.github.io/pixel-pb/) with bulk row-selection tools.
+A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is based on [Pixel PB](https://nxij.github.io/pixel-pb/) and adds:
+
+- Bulk row selection, copying, deletion, and “remove all except selected”.
+- Transferable text exports for moving selected combo rows between profiles.
+- Reuse/import of matching NR feature definitions when importing rows.
+- Exact-combo search, including searches for repeated bands such as `n78+n78`.
+- An all-rows display option for large profiles.
 
 ## Run or host it
 
@@ -45,3 +51,7 @@ The output filename should match the profile the phone loads (for example, `VHA.
 - This editor changes UE capability advertisements; it cannot add RF hardware support or make a network schedule an unsupported CA combination.
 - Feature references and carrier-specific profile headers can matter. Test one small change at a time and keep a known-good recovery copy.
 - This project is an independent wrapper/modification of Pixel PB. Refer to the upstream project for the underlying editor and format support.
+
+## Special thanks
+
+Special thanks to [nxij](https://github.com/nxij), the original author of Pixel PB, for creating and open-sourcing the editor this project builds on.
