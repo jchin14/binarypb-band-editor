@@ -2,6 +2,8 @@
 
 > Browser-based editor for Pixel/Samsung `.binarypb` UE-capability profiles, with bulk band-combination editing tools.
 
+**Live editor:** [binarypb.jchin.au](https://binarypb.jchin.au)
+
 A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is based on [Pixel PB](https://nxij.github.io/pixel-pb/) and adds:
 
 - Bulk row selection, copying, deletion, and “remove all except selected”.
