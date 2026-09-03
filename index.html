@@ -2753,6 +2753,10 @@
         let clearSessionFlag = false;
 
         function clearLocalStorageAndReload() {
+            if (!confirm("Clear the stored session? This discards any unsaved edits and reloads the page.")) {
+                return;
+            }
+
             // Set the flag to indicate that localStorage has been cleared
             clearSessionFlag = true;
 
