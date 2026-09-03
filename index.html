@@ -180,13 +180,13 @@
             margin-right: 2px;
         }
         .ran-nr {
-            background-color: light-dark(#e3f0ff, #16324a);
+            background-color: light-dark(#e3f0ff, #1c3f61);
         }
         .ran-lte {
-            background-color: light-dark(#eaf7ea, #17331c);
+            background-color: light-dark(#eaf7ea, #1e4626);
         }
         .ran-mmwave {
-            background-color: light-dark(#f3e8ff, #33204a);
+            background-color: light-dark(#f3e8ff, #422a63);
         }
         /* Inset box-shadow instead of outline/border so the orange highlight
            stays purely decorative and never affects cell sizing/alignment.
@@ -239,15 +239,15 @@
             border-radius: 3px;
         }
         .row-color-legend .legend-swatch.ran-lte {
-            background-color: light-dark(#eaf7ea, #17331c);
+            background-color: light-dark(#eaf7ea, #1e4626);
             border: 1px solid #4caf50;
         }
         .row-color-legend .legend-swatch.ran-nr {
-            background-color: light-dark(#e3f0ff, #16324a);
+            background-color: light-dark(#e3f0ff, #1c3f61);
             border: 1px solid #2196f3;
         }
         .row-color-legend .legend-swatch.ran-mmwave {
-            background-color: light-dark(#f3e8ff, #33204a);
+            background-color: light-dark(#f3e8ff, #422a63);
             border: 1px solid #9c27b0;
         }
         .row-color-legend .legend-swatch.color-row {
@@ -255,7 +255,7 @@
             border: 2px solid #f59e0b;
         }
         .main-table .combo-row:nth-of-type(even) {
-            background-color: light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.03));
+            background-color: light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.07));
         }
         .combo-table-wrapper {
             position: relative;
@@ -501,8 +501,17 @@
         .patch-hint-caution {
             color: light-dark(#b91c1c, #f87171);
         }
+        .bulk-edit-banner {
+            background-color: #f59e0b;
+            color: #1a1a1a;
+            font-weight: 700;
+            text-align: center;
+            padding: 6px 10px;
+            border-radius: var(--radius);
+            margin: 0 5px 6px;
+        }
         .groupheader {
-            color: #666;
+            color: light-dark(#666, #aaa);
             padding: 0px;
             display: flex;
             flex-wrap: wrap;
@@ -649,14 +658,14 @@
                 display: block;
                 width: 100%;
                 font-size: 10px;
-                color: #666;
+                color: light-dark(#666, #aaa);
             }
             .combo-col-ul::before {
                 content: "UL";
                 display: block;
                 width: 100%;
                 font-size: 10px;
-                color: #666;
+                color: light-dark(#666, #aaa);
             }
             .bandextraind {
                 display: none !important;
@@ -755,6 +764,7 @@
     <div class="container">
         <div class="header" id="mainHeader">
             <input type="file" title="Load a .binarypb file, or a Magisk module .zip containing one" id="fileInput" accept=".binarypb,.zip" />
+            <button id="newProfileBtn" title="Start a brand new empty profile from scratch" onclick="startNewProfile()">+ New profile</button>
             <select id="templateSelect" title="Load a stock Pixel 7 Pro (AU) profile as a starting point" onchange="if (this.value) { loadTemplateProfile(this.value); this.value = ''; }">
                 <option value="">Load stock profile...</option>
                 <option value="WILDCARD">Wildcard</option>
@@ -924,6 +934,18 @@
         </div>
     </div>
 
+    <div id="loadModeModal" class="modal">
+        <div class="modal-content">
+            <h3>Load profile</h3>
+            <p>A profile is already loaded. Do you want to add this file's combos to it, or replace it completely?</p>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" onclick="closeLoadModeModal()">Cancel</button>
+                <button class="modalbtn" onclick="resolveLoadMode('replace')">Replace all combos</button>
+                <button class="modalbtn" onclick="resolveLoadMode('add')">Add combos</button>
+            </div>
+        </div>
+    </div>
+
     <div id="compareModal" class="modal">
         <div class="modal-content compare-modal-content">
             <h3>Compare profiles</h3>
@@ -946,7 +968,8 @@
             <div class="help-section">
                 <h4>Top bar</h4>
                 <ul>
-                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically.</li>
+                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry) or replace the current profile completely.</li>
+                    <li><b>+ New profile</b> — start with a completely empty profile so you can build combos from scratch, without loading a file first.</li>
                     <li><b>⇄ Compare</b> — compares the currently loaded profile against another .binarypb or Magisk zip you pick, matching combos by band composition (order-independent) and listing which combos are only in one profile or the other.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
                     <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. Matches are always exact — a combo must consist of exactly the named bands, with no unmentioned extras — unless you use one of these: a trailing <code>*</code> directly on a term means "contains", allowing any other bands too: <code>n78*</code> matches n78 alone or with anything else (shorthand for <code>n78|n78+</code>). A standalone <code>*</code> term is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit): <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
@@ -1083,6 +1106,7 @@
             const customFeatureModal = document.getElementById('customFeatureModal');
             const helpModal = document.getElementById('helpModal');
             const compareModal = document.getElementById('compareModal');
+            const loadModeModal = document.getElementById('loadModeModal');
 
             if (event.target === jsonModal) {
                 closeModal();
@@ -1092,6 +1116,8 @@
                 closeHelpModal();
             } else if (event.target === compareModal) {
                 closeCompareModal();
+            } else if (event.target === loadModeModal) {
+                closeLoadModeModal();
             }
         };
         // Close json modal on esc
@@ -1100,6 +1126,7 @@
                 closeModal();
                 closeCustomFeatureModal();
                 closeCompareModal();
+                closeLoadModeModal();
             }
         });
 
@@ -1505,6 +1532,7 @@
                     </span>
                     </span>
                 </div></div>
+            ${selectedCombos.size > 1 ? `<div class="bulk-edit-banner">Bulk Editing ${selectedCombos.size} Combos</div>` : ''}
             <table class="main-table" style="border-collapse: collapse;">
                 <tr>
                     <th><button title="Add a new combo" onclick="addNewComboToFirstGroup()">+ Add Combo</button> Filtered Combos: ${countCombos(filteredGroups)}/${countCombos(decodedData.ComboGroups)}</th>
@@ -2771,14 +2799,97 @@
             return { buffer, filename: file.name };
         }
 
+        function startNewProfile() {
+            if (decodedData && countCombos(decodedData.ComboGroups) > 0) {
+                if (!confirm("Start a new empty profile? This replaces the profile currently loaded — unsaved changes will be lost.")) return;
+            }
+            originalFilename = "new_profile";
+            document.getElementById("filenameInput").value = originalFilename;
+            decodedData = {
+                version: 1,
+                id: 0,
+                ComboGroups: [],
+                dlFeaturePerCCList: [],
+                ulFeaturePerCCList: []
+            };
+            generateTable(decodedData);
+        }
+
+        // Merges another decoded profile's combos into the currently loaded one,
+        // remapping NR feature-set references (dlFeaturePerCCIds/ulFeaturePerCCIds)
+        // into the current profile's dlFeaturePerCCList/ulFeaturePerCCList so the
+        // indices still point at the right feature set after the merge.
+        function mergeProfileIntoDecodedData(otherData) {
+            processDecodedMessage(otherData);
+            const sourceDlFeatures = Array.isArray(otherData.dlFeaturePerCCList) ? otherData.dlFeaturePerCCList : null;
+            const sourceUlFeatures = Array.isArray(otherData.ulFeaturePerCCList) ? otherData.ulFeaturePerCCList : null;
+            decodedData.dlFeaturePerCCList ||= [];
+            decodedData.ulFeaturePerCCList ||= [];
+
+            (otherData.ComboGroups || []).forEach(group => {
+                const combos = group.combo.map(combo => {
+                    const newCombo = JSON.parse(JSON.stringify(combo));
+                    newCombo.cc.forEach(ccItem => {
+                        if (ccItem.band > 10000) {
+                            ccItem.dlFeaturePerCCIds = mapImportedFeatureIds(ccItem.dlFeaturePerCCIds, sourceDlFeatures, decodedData.dlFeaturePerCCList);
+                            ccItem.ulFeaturePerCCIds = mapImportedFeatureIds(ccItem.ulFeaturePerCCIds, sourceUlFeatures, decodedData.ulFeaturePerCCList);
+                        } else {
+                            ccItem.dlFeaturePerCCIds = importFeatureIds(ccItem.dlFeaturePerCCIds);
+                            ccItem.ulFeaturePerCCIds = importFeatureIds(ccItem.ulFeaturePerCCIds);
+                        }
+                    });
+                    return newCombo;
+                });
+                decodedData.ComboGroups.push({ comboHeader: JSON.parse(JSON.stringify(group.comboHeader)), combo: combos });
+            });
+
+            generateTable(decodedData);
+        }
+
+        let pendingLoadFile = null;
+
+        function closeLoadModeModal() {
+            document.getElementById('loadModeModal').style.display = 'none';
+            pendingLoadFile = null;
+            document.getElementById('fileInput').value = '';
+        }
+
+        async function resolveLoadMode(mode) {
+            const file = pendingLoadFile;
+            document.getElementById('loadModeModal').style.display = 'none';
+            pendingLoadFile = null;
+            if (!file) return;
+            try {
+                const { buffer, filename } = await extractBinaryPbBytes(file);
+                if (mode === 'add') {
+                    const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
+                    const otherData = UeCaps.toObject(decodedMessage, { defaults: true });
+                    mergeProfileIntoDecodedData(otherData);
+                } else {
+                    loadBinaryPbBuffer(buffer, filename);
+                }
+            } catch (error) {
+                alert("Failed to load file: " + error.message);
+            } finally {
+                document.getElementById('fileInput').value = '';
+            }
+        }
+
         document.getElementById('fileInput').addEventListener('change', async function(event) {
             const file = event.target.files[0];
             if (!file) return;
+            if (decodedData && countCombos(decodedData.ComboGroups) > 0) {
+                pendingLoadFile = file;
+                document.getElementById('loadModeModal').style.display = 'block';
+                return;
+            }
             try {
                 const { buffer, filename } = await extractBinaryPbBytes(file);
                 loadBinaryPbBuffer(buffer, filename);
             } catch (error) {
                 alert("Failed to load file: " + error.message);
+            } finally {
+                document.getElementById('fileInput').value = '';
             }
         });
 
