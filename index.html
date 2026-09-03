@@ -123,20 +123,24 @@
             border-radius: var(--radius);
             margin-bottom: 6px;
         }
-        .title-col-band {
-            width: 168px;
+        .title-col-band, .combo-col-band {
+            width: 195px;
+            box-sizing: border-box;
         }
-        .title-col-bw {
+        .title-col-bw, .combo-col-bw {
+            width: 36px;
+            box-sizing: border-box;
+        }
+        .title-col-feat, .combo-col-feat {
             width: 32px;
-        }
-        .title-col-feat {
-            width: 26px;
+            box-sizing: border-box;
         }
         .title-col-dl, .title-col-ul {
             width: clamp(200px, 32vw, 520px);
         }
         .combo-col-band, .combo-col-bw, .combo-col-feat {
             white-space: nowrap;
+            overflow: hidden;
         }
         .cc-feature-cell {
             display: flex;
@@ -147,7 +151,7 @@
             box-sizing: border-box;
         }
         .combo-table select[name="FeatureId"] {
-            width: 70%;
+            flex: 1 1 auto;
             min-width: 120px;
         }
         .combo-table td, .combo-table th {
@@ -1482,10 +1486,12 @@
                         let bandInput = `<span class="cc-index">${ccIndex + 1}</span><input name="band-input" type="text" class="band-input" value="${bandParseInt(ccItem.bwClassDL,ccItem.band)}"
                             onchange="updateBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, this.value)" />`;
 
-                        // Show "+" button only for the last band input
-                        let addBandBtn = ccIndex === combo.cc.length - 1
-                            ? `<button onclick="addBand(${realGroupIndex}, ${localComboIndex})">+</button>`
-                            : "";
+                        // Always render the "+" button (kept invisible except on the
+                        // last band input) so every row has the same content shape -
+                        // otherwise rows with vs without it get different auto-layout
+                        // column widths across separate combo tables, breaking
+                        // alignment with the header and with each other.
+                        let addBandBtn = `<button onclick="addBand(${realGroupIndex}, ${localComboIndex})" style="${ccIndex === combo.cc.length - 1 ? "" : "visibility:hidden"}">+</button>`;
 
                         let moveBandUpBtn = `<button title="Move band up" onclick="moveBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, -1)" ${ccIndex === 0 ? "disabled" : ""}>↑</button>`;
                         let moveBandDownBtn = `<button title="Move band down" onclick="moveBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, 1)" ${ccIndex === combo.cc.length - 1 ? "disabled" : ""}>↓</button>`;
