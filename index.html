@@ -501,6 +501,17 @@
         .patch-hint-caution {
             color: light-dark(#b91c1c, #f87171);
         }
+        .zip-entry-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 10px 0;
+        }
+        .zip-entry-list button {
+            width: 100%;
+            text-align: left;
+            padding: 8px 10px;
+        }
         .bulk-edit-banner {
             background-color: #f59e0b;
             color: #1a1a1a;
@@ -934,6 +945,17 @@
         </div>
     </div>
 
+    <div id="zipEntryModal" class="modal">
+        <div class="modal-content">
+            <h3>Choose a profile</h3>
+            <p>This zip contains multiple .binarypb files. Pick which one to open.</p>
+            <div id="zipEntryList" class="zip-entry-list"></div>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" id="zipEntryCancelBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="loadModeModal" class="modal">
         <div class="modal-content">
             <h3>Load profile</h3>
@@ -968,7 +990,7 @@
             <div class="help-section">
                 <h4>Top bar</h4>
                 <ul>
-                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry, and combos whose band composition already exists are skipped) or replace the current profile completely.</li>
+                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically — if the zip contains more than one .binarypb (a multi-carrier bundle), you'll be asked which one to open. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry, and combos whose band composition already exists are skipped) or replace the current profile completely.</li>
                     <li><b>+ New profile</b> — start with a completely empty profile so you can build combos from scratch, without loading a file first.</li>
                     <li><b>⇄ Compare</b> — compares the currently loaded profile against another .binarypb or Magisk zip you pick, matching combos by band composition (order-independent) and listing which combos are only in one profile or the other.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above). If a profile is already loaded, you'll be asked whether to add the template's combos in or replace the current profile, same as picking a file.</li>
@@ -1107,6 +1129,7 @@
             const helpModal = document.getElementById('helpModal');
             const compareModal = document.getElementById('compareModal');
             const loadModeModal = document.getElementById('loadModeModal');
+            const zipEntryModal = document.getElementById('zipEntryModal');
 
             if (event.target === jsonModal) {
                 closeModal();
@@ -1118,6 +1141,8 @@
                 closeCompareModal();
             } else if (event.target === loadModeModal) {
                 closeLoadModeModal();
+            } else if (event.target === zipEntryModal) {
+                document.getElementById('zipEntryCancelBtn')?.click();
             }
         };
         // Close json modal on esc
@@ -1127,6 +1152,9 @@
                 closeCustomFeatureModal();
                 closeCompareModal();
                 closeLoadModeModal();
+                if (document.getElementById('zipEntryModal').style.display === 'block') {
+                    document.getElementById('zipEntryCancelBtn')?.click();
+                }
             }
         });
 
@@ -2784,14 +2812,47 @@
             }
         }
 
-        // Reads a .binarypb file, or pulls one out of a Magisk module .zip.
+        // Shows the zip-entry picker modal and resolves with the chosen entry,
+        // or null if the user cancels.
+        function pickZipEntry(entries) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('zipEntryModal');
+                const list = document.getElementById('zipEntryList');
+                list.innerHTML = '';
+                entries.forEach(entry => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'modalbtn';
+                    btn.textContent = entry.name.split('/').pop();
+                    btn.onclick = () => {
+                        modal.style.display = 'none';
+                        resolve(entry);
+                    };
+                    list.appendChild(btn);
+                });
+                document.getElementById('zipEntryCancelBtn').onclick = () => {
+                    modal.style.display = 'none';
+                    resolve(null);
+                };
+                modal.style.display = 'block';
+            });
+        }
+
+        // Reads a .binarypb file, or pulls one out of a Magisk module .zip
+        // (prompting for which one if the zip carries more than one, e.g. a
+        // multi-carrier bundle).
         async function extractBinaryPbBytes(file) {
             if (file.name.toLowerCase().endsWith('.zip')) {
                 const zip = await JSZip.loadAsync(file);
-                const entry = Object.values(zip.files).find(f =>
+                const entries = Object.values(zip.files).filter(f =>
                     !f.dir && f.name.toLowerCase().endsWith('.binarypb')
                 );
-                if (!entry) throw new Error("No .binarypb file found inside this zip.");
+                if (entries.length === 0) throw new Error("No .binarypb file found inside this zip.");
+                let entry = entries[0];
+                if (entries.length > 1) {
+                    entry = await pickZipEntry(entries);
+                    if (!entry) throw new Error("No file was chosen from the zip.");
+                }
                 const buffer = await entry.async('arraybuffer');
                 return { buffer, filename: entry.name.split('/').pop() };
             }
