@@ -80,6 +80,7 @@
         .combo-table {
             width: auto;
             border: 0px;
+            margin: 0;
         }
         @media (min-width: 769px) {
             .main-table {
@@ -96,6 +97,10 @@
             }
         }
         .combo-number {
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            z-index: 2;
             display: inline-block;
             background-color: var(--accent);
             color: white;
@@ -103,7 +108,7 @@
             font-size: 9px;
             padding: 0px 5px;
             border-radius: 999px;
-            margin-bottom: 1px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.4);
         }
         .combo-col-titles-row td {
             padding: 0;
@@ -179,9 +184,22 @@
         .ran-mmwave {
             background-color: light-dark(#f3e8ff, #33204a);
         }
-        .color-row {
-            outline: 2px solid #f59e0b !important;
-            outline-offset: -2px;
+        /* Inset box-shadow instead of outline/border so the orange highlight
+           stays purely decorative and never affects cell sizing/alignment.
+           When two UL-feature rows are adjacent, the second one's top edge
+           is dropped so only one line shows between them, not a doubled one. */
+        .color-row td {
+            box-shadow:
+                inset 2px 0 0 #f59e0b,
+                inset -2px 0 0 #f59e0b,
+                inset 0 2px 0 #f59e0b,
+                inset 0 -2px 0 #f59e0b;
+        }
+        .color-row + .color-row td {
+            box-shadow:
+                inset 2px 0 0 #f59e0b,
+                inset -2px 0 0 #f59e0b,
+                inset 0 -2px 0 #f59e0b;
         }
         .rat-filter-group {
             display: inline-flex;
@@ -234,6 +252,9 @@
         }
         .main-table .combo-row:nth-of-type(even) {
             background-color: light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.03));
+        }
+        .combo-table-wrapper {
+            position: relative;
         }
         .band-input {
             width: 45px;
@@ -752,6 +773,7 @@
                 <input type="text" id="filenameInput" value="" onchange="updateFilename(this.value)">
                 <button title="Download the compiled binarypb file" onclick="dlProtobuf()">↓ .binarypb</button>
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
+                <label title="Also overlay this same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads"><input type="checkbox" id="alsoOverrideWildcard" onchange="alsoOverrideWildcard = this.checked;"> Also override WILDCARD</label>
             </div>
         </div>
         <div id="tableContainer"></div>
@@ -894,6 +916,7 @@
                     <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
                     <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb.</li>
                     <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone.</li>
+                    <li><b>Also override WILDCARD</b> — when checked, the generated zip also overlays the same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads.</li>
                     <li><b>Clear session</b> — wipes the locally stored session and reloads the page.</li>
                     <li><b>View on GitHub</b> — opens the project's source code repository.</li>
                 </ul>
@@ -1327,6 +1350,7 @@
         let rowsPerPage = 20;
         let bandFilter = "";
         let ulOnlyFilter = false;
+        let alsoOverrideWildcard = false;
         let ratFilter = { '4G': true, '5G': true };
 
         // This format only ever encodes LTE (4G) and NR (5G) bands.
@@ -1454,8 +1478,7 @@
 
                 group.combo.forEach((combo, localComboIndex) => {
                     comboCounter++;
-                    let innerTableHTML = `<div class="combo-number">#${comboCounter}</div>
-                        <div class="groupheader">
+                    let innerTableHTML = `<div class="groupheader">
                             <span>bcsNr:</span>
                             <input type="text" name="bcsNr" value="${parseBcs(group.comboHeader.bcsNr)}" oninput="updateBcs(${realGroupIndex},this.value,'bcsNr')">
                             <span>bcsIntraENDC:</span>
@@ -1470,6 +1493,8 @@
                             <span>intraEndc:</span>
                             <input type="text" name="intraBandEnDcSupport" value="${group.comboHeader.intraBandEnDcSupport}" oninput="updateComboHeader(${realGroupIndex},this.value,'intraBandEnDcSupport')">
                         </div>
+                        <div class="combo-table-wrapper">
+                        <div class="combo-number">#${comboCounter}</div>
                         <table class="combo-table" style="border-collapse: collapse;">`;
 
                     combo.cc.forEach((ccItem, ccIndex) => {
@@ -1579,7 +1604,7 @@
                         </tr>`;
                     });
 
-                    innerTableHTML += '</table>';
+                    innerTableHTML += '</table></div>';
 
                     tableHTML += `<tr class="combo-row">
                         <td>${innerTableHTML}</td>
@@ -2753,13 +2778,14 @@
 ui_print "  by jchin14 - https://github.com/jchin14/binarypb-band-editor"
 ui_print "  ${originalFilename}: ${comboCount} combos"
 set_perm_recursive $MODPATH 0 0 0755 0644
-chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/${originalFilename}.binarypb`;
+chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/${originalFilename}.binarypb${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? `
+chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/WILDCARD.binarypb` : ""}`;
             const moduleprop_file = `id=PixelUecap
 name=BinaryPB Band Editor
 version=${curr_time}
 versionCode=${(Date.now()).toString().slice(9)}
 author=jchin14
-description=https://github.com/jchin14/binarypb-band-editor - Replaces ${originalFilename}, ${comboCount} combos. Generated with https://binarypb.jchin.au.
+description=https://github.com/jchin14/binarypb-band-editor - Replaces ${originalFilename}${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? " and WILDCARD" : ""}, ${comboCount} combos. Generated with https://binarypb.jchin.au.
 support=https://github.com/jchin14/binarypb-band-editor`;
 
             // Convert base64 to binary
@@ -2779,7 +2805,10 @@ support=https://github.com/jchin14/binarypb-band-editor`;
             folder1.file("updater-script", "#MAGISK", { unixPermissions: "644" });
 
             folder2.file(`${originalFilename}.binarypb`, recompileProtobuf(), { unixPermissions: "644" });
-            
+            if (alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") {
+                folder2.file("WILDCARD.binarypb", recompileProtobuf(), { unixPermissions: "644" });
+            }
+
             try {
                 // Generate the ZIP file
                 const content = await zip.generateAsync({
