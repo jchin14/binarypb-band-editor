@@ -104,28 +104,45 @@
             border-radius: 999px;
             margin-bottom: 1px;
         }
-        .combo-col-titles th {
+        .combo-col-titles-row td {
+            padding: 0;
+            border: none;
+        }
+        .combo-col-titles-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
             background-color: light-dark(var(--blue), var(--dark-grey));
             color: white;
             font-size: 10px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            text-align: left;
-            padding: 2px 5px;
+            padding: 4px 6px;
+            border-radius: var(--radius);
+            margin-bottom: 6px;
+        }
+        .title-col-band {
+            width: 168px;
+        }
+        .title-col-bw {
+            width: 32px;
+        }
+        .title-col-feat {
+            width: 26px;
+        }
+        .title-col-dl, .title-col-ul {
+            width: clamp(200px, 32vw, 520px);
         }
         .combo-col-band, .combo-col-bw, .combo-col-feat {
             white-space: nowrap;
         }
-        .combo-col-titles .combo-col-dl,
-        .combo-col-titles .combo-col-ul {
-            width: 260px;
-        }
         .cc-feature-cell {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 2px;
-            width: 260px;
+            width: clamp(200px, 32vw, 520px);
             box-sizing: border-box;
         }
         .combo-table select[name="FeatureId"] {
@@ -248,19 +265,22 @@
             line-height: 1;
         }
         .buttons {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 8px;
+            align-items: center;
         }
         .combo-select {
             width: 18px;
             height: 18px;
-            margin: 0 0 8px;
+            margin: 0;
+            justify-self: start;
         }
         #tableContainer {
             padding-top: 12px;
         }
         .btn-json {
-            margin-bottom: 5px;
+            margin-bottom: 0;
         }
         .modal {
             display: none;
@@ -358,11 +378,18 @@
             display: flex;
             justify-content: space-evenly;
         }
+        .patches-grid {
+            display: inline-grid;
+            grid-template-columns: auto auto;
+            column-gap: 8px;
+            row-gap: 2px;
+            align-items: center;
+            vertical-align: middle;
+        }
         .patch-hint {
-            display: block;
             font-size: 11px;
             font-weight: 600;
-            margin-top: 2px;
+            text-align: left;
         }
         .patch-hint-required {
             color: light-dark(#b45309, #f0b429);
@@ -391,9 +418,6 @@
         }
         .fsaddbtn {
             width: 100%;
-        }
-        .combodirind {
-            display: none !important;
         }
         @media (max-width: 768px) {
 
@@ -503,14 +527,25 @@
                 flex-wrap: wrap;
                 align-items: center;
             }
-            .combo-col-titles {
+            .combo-col-titles-row {
                 display: none !important;
             }
             .cc-feature-cell {
                 width: 100% !important;
             }
-            .combodirind {
-            display: flex !important;
+            .combo-col-dl::before {
+                content: "DL";
+                display: block;
+                width: 100%;
+                font-size: 10px;
+                color: #666;
+            }
+            .combo-col-ul::before {
+                content: "UL";
+                display: block;
+                width: 100%;
+                font-size: 10px;
+                color: #666;
             }
             .bandextraind {
                 display: none !important;
@@ -1272,10 +1307,12 @@
                     <button title="Edit available FeatureSets" id="editFeatureSetsBtn" onclick="editFeatureSets(1)">JSON</button>
                     </span>
                 <span id="infoPatches">Patches:
-                    <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
-                    <button title="Auto-set from your imported file — don't touch unless you know what you're doing. If present, it must match the value your phone's currently active binarypb has." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
-                    <span class="patch-hint patch-hint-required">⚠ Required on Pixel 7/8</span>
-                    <span class="patch-hint patch-hint-caution">⚠ Integrity is auto-set from your file — don't touch unless you know what you're doing</span>
+                    <span class="patches-grid">
+                        <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
+                        <span class="patch-hint patch-hint-required">⚠ Required on Pixel 7/8</span>
+                        <button title="Auto-set from your imported file — don't touch unless you know what you're doing. If present, it must match the value your phone's currently active binarypb has." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
+                        <span class="patch-hint patch-hint-caution">⚠ Integrity is auto-set from your file, don't touch unless you know what you're doing</span>
+                    </span>
                     </span>
                 </div></div>
             <table class="main-table" style="border-collapse: collapse;">
@@ -1291,6 +1328,21 @@
                     </th>
                 </tr>`;
 
+            if (totalRows > 0) {
+                tableHTML += `<tr class="combo-col-titles-row">
+                    <td>
+                        <div class="combo-col-titles-bar">
+                            <span class="title-col title-col-band">Band</span>
+                            <span class="title-col title-col-bw">BW</span>
+                            <span class="title-col title-col-feat">F#</span>
+                            <span class="title-col title-col-dl">Download (DL)</span>
+                            <span class="title-col title-col-ul">Upload (UL)</span>
+                        </div>
+                    </td>
+                    <td></td>
+                </tr>`;
+            }
+
             if (currentPage > totalPages) {
                 currentPage = 1;
                 start = 0;
@@ -1301,7 +1353,6 @@
             globalIndexMap = filteredGroups.map(group => decodedData.ComboGroups.indexOf(group)); // Map to real indices
 
             let comboCounter = start;
-            let titlesRendered = false;
 
             paginatedGroups.forEach((group, localGroupIndex) => {
                 let realGroupIndex = globalIndexMap[start + localGroupIndex]; // Map local to real index
@@ -1325,19 +1376,6 @@
                             <input type="text" name="intraBandEnDcSupport" value="${group.comboHeader.intraBandEnDcSupport}" oninput="updateComboHeader(${realGroupIndex},this.value,'intraBandEnDcSupport')">
                         </div>
                         <table class="combo-table" style="border-collapse: collapse;">`;
-
-                    if (!titlesRendered) {
-                        titlesRendered = true;
-                        innerTableHTML += `<tr class="combo-col-titles">
-                            <th class="combo-col-band">Band</th>
-                            <th class="bandextraind combo-col-bw">BW</th>
-                            <th class="bandextraind combo-col-feat">F#</th>
-                            <th class="combodirind"></th>
-                            <th class="combo-col-dl">Download (DL)</th>
-                            <th class="combodirind"></th>
-                            <th class="combo-col-ul">Upload (UL)</th>
-                        </tr>`;
-                    }
 
                     combo.cc.forEach((ccItem, ccIndex) => {
                         let hasUlFeature = ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0;
@@ -1438,9 +1476,7 @@
                             <td class="combo-col-band">${bandInput} ${moveBandUpBtn} ${moveBandDownBtn} ${removeBandBtn} ${addBandBtn}</td>
                             <td class="bandextraind combo-col-bw">${ccItem.bwClassDL}/${ccItem.bwClassUL}</td>
                             <td class="bandextraind combo-col-feat">${ccItem.dlFeatureIndex}/${ccItem.ulFeatureIndex}</td>
-                            <td class="combodirind"><span class="groupheader">DL</span></td>
                             <td class="combo-col-dl"><div class="cc-feature-cell">${dlFeaturePerCCIdsHTML}</div></td>
-                            <td class="combodirind"><span class="groupheader">UL</span></td>
                             <td class="combo-col-ul"><div class="cc-feature-cell">${ulFeaturePerCCIdsHTML}</div></td>
                         </tr>`;
                     });
@@ -1451,8 +1487,8 @@
                         <td>${innerTableHTML}</td>
                         <td class="buttons">
                             <input class="combo-select" type="checkbox" title="Select this combo" ${selectedCombos.has(combo) ? "checked" : ""} onchange="toggleComboSelection(${realGroupIndex}, ${localComboIndex}, this.checked)">
-                            <button title="Edit this combo in json" class="btn-json"onclick="showJSON(${realGroupIndex}, ${localComboIndex})">JSON</button>
                             <button title="Copy this combo" class="btn-copy" onclick="copyCombo(${realGroupIndex}, ${localComboIndex})">Copy</button>
+                            <button title="Edit this combo in json" class="btn-json"onclick="showJSON(${realGroupIndex}, ${localComboIndex})">JSON</button>
                             <button title="Remove this combo" class="btn-rem" onclick="removeCombo(${realGroupIndex}, ${localComboIndex})">Remove</button>
                         </td>
                     </tr>`;
