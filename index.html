@@ -375,6 +375,12 @@
             overflow: auto;
             background-color: #00000066;
         }
+        /* Can be opened on top of another already-open modal (e.g. picking a
+           zip entry while the Compare modal is open) -- needs to paint above
+           it regardless of DOM order. */
+        #zipEntryModal, #bmPatchModal {
+            z-index: 4;
+        }
         .modal-content {
             background-color: light-dark(var(--white), var(--dark-grey));
             margin: 6% auto;
