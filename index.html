@@ -1000,8 +1000,8 @@
                     <li><b>4G / 5G</b> — filter combos by network type (this format only ever encodes LTE and NR, so no 2G/3G option exists).</li>
                     <li><b>« Prev / Next »</b> — jump straight to the first or last page, or step one page at a time. <b>Per page</b> controls how many combos are shown at once (including an "all rows" option for large profiles).</li>
                     <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
-                    <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb.</li>
-                    <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone.</li>
+                    <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb. Asks whether the target phone is a Pixel 7/8 first, and sets the BM 65k patch accordingly before downloading.</li>
+                    <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone. Asks the same Pixel 7/8 question first.</li>
                     <li><b>Also override WILDCARD</b> — when checked, the generated zip also overlays the same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads.</li>
                     <li><b>Clear session</b> — wipes the locally stored session and reloads the page.</li>
                     <li><b>View on GitHub</b> — opens the project's source code repository.</li>
@@ -2568,8 +2568,9 @@
         }
 
         let bitMaskToggled = false; // Track toggle state
-        function toggleBitMask() {
-            bitMaskToggled = !bitMaskToggled; // Toggle state
+
+        function setBitMask(applied) {
+            bitMaskToggled = applied;
 
             decodedData.ComboGroups.forEach(group => {
                 group.combo.forEach(combo => {
@@ -2588,6 +2589,19 @@
             }, 10); // Small delay to ensure it updates properly
 
             console.log(`All bitMask values set to ${bitMaskToggled ? 65535 : 0}`);
+        }
+
+        function toggleBitMask() {
+            setBitMask(!bitMaskToggled);
+        }
+
+        // Asks which device this download is for and sets the BM 65k patch
+        // accordingly, so downloading always reflects the right device instead
+        // of relying on whatever the manual toggle happens to be set to.
+        function confirmBitMaskForDownload() {
+            if (!decodedData) return;
+            const isPixel78 = confirm("Is this being installed on a Pixel 7 or Pixel 8?\n\nOK — Yes: apply the BM 65k patch (required on those devices to enable all bands).\nCancel — No: download without the patch.");
+            setBitMask(isPixel78);
         }
 
         let integrityToggled = false; // Track toggle state
@@ -3122,6 +3136,7 @@
         }
 
         function dlProtobuf() {
+            confirmBitMaskForDownload();
             const link = document.createElement("a");
             link.href = URL.createObjectURL(recompileProtobuf());
             link.download = `mod_${originalFilename}.binarypb`;
@@ -3223,6 +3238,7 @@
         }
         
         async function createZipWithSubdirectories() {
+            confirmBitMaskForDownload();
             let curr_time = getFormattedDate();
             // Create a new ZIP instance
             const zip = new JSZip();
