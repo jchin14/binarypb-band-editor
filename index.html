@@ -968,7 +968,7 @@
             <div class="help-section">
                 <h4>Top bar</h4>
                 <ul>
-                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry) or replace the current profile completely.</li>
+                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry, and combos whose band composition already exists are skipped) or replace the current profile completely.</li>
                     <li><b>+ New profile</b> — start with a completely empty profile so you can build combos from scratch, without loading a file first.</li>
                     <li><b>⇄ Compare</b> — compares the currently loaded profile against another .binarypb or Magisk zip you pick, matching combos by band composition (order-independent) and listing which combos are only in one profile or the other.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above). If a profile is already loaded, you'll be asked whether to add the template's combos in or replace the current profile, same as picking a file.</li>
@@ -2826,8 +2826,25 @@
             decodedData.dlFeaturePerCCList ||= [];
             decodedData.ulFeaturePerCCList ||= [];
 
+            // Skip any incoming combo whose band composition (order-independent)
+            // already exists, whether from the current profile or already added
+            // earlier in this same merge.
+            const existingSignatures = new Set();
+            decodedData.ComboGroups.forEach(group => group.combo.forEach(combo => existingSignatures.add(comboSignature(combo))));
+
+            let addedCount = 0;
+            let skippedCount = 0;
+
             (otherData.ComboGroups || []).forEach(group => {
-                const combos = group.combo.map(combo => {
+                const combos = [];
+                group.combo.forEach(combo => {
+                    const sig = comboSignature(combo);
+                    if (existingSignatures.has(sig)) {
+                        skippedCount++;
+                        return;
+                    }
+                    existingSignatures.add(sig);
+
                     const newCombo = JSON.parse(JSON.stringify(combo));
                     newCombo.cc.forEach(ccItem => {
                         if (ccItem.band > 10000) {
@@ -2838,12 +2855,16 @@
                             ccItem.ulFeaturePerCCIds = importFeatureIds(ccItem.ulFeaturePerCCIds);
                         }
                     });
-                    return newCombo;
+                    combos.push(newCombo);
+                    addedCount++;
                 });
-                decodedData.ComboGroups.push({ comboHeader: JSON.parse(JSON.stringify(group.comboHeader)), combo: combos });
+                if (combos.length > 0) {
+                    decodedData.ComboGroups.push({ comboHeader: JSON.parse(JSON.stringify(group.comboHeader)), combo: combos });
+                }
             });
 
             generateTable(decodedData);
+            alert(`Added ${addedCount} new combo${addedCount === 1 ? '' : 's'}.${skippedCount > 0 ? ` Skipped ${skippedCount} duplicate${skippedCount === 1 ? '' : 's'} already in the profile.` : ''}`);
         }
 
         // Set to an async function returning { buffer, filename } while the
