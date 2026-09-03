@@ -728,7 +728,7 @@
         </div>
         <div class="header loaded-header" id="loadedControlsBar" style="display: none;">
             <div id="bandFilter">
-                <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41 | n78+*" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41   Wildcard (one other CC): n78+*">
+                <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41 | n78+*+" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41   Wildcard (exactly one other CC): n78+*   Open-ended (at least one/N more): n78+ / n78+*+">
                 <label title="Show only combos containing exactly the searched component carriers, with no extras"><input type="checkbox" id="exactComboFilter" onchange="exactComboFilter = this.checked; generateTable(decodedData);"> Exact combo only</label>
                 <label title="Only match a band if that component carrier actually has uplink features declared, not just present for downlink"><input type="checkbox" id="ulOnlyFilter" onchange="ulOnlyFilter = this.checked; generateTable(decodedData);"> Search UL only</label>
                 <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; ulOnlyFilter=false; document.getElementById('exactComboFilter').checked=false; document.getElementById('ulOnlyFilter').checked=false; generateTable(decodedData);">Clear</button>
@@ -888,7 +888,7 @@
                 <ul>
                     <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
-                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. <code>*</code> is a wildcard meaning "one other unspecified band": <code>n78+*</code> matches combos with n78 and exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others.</li>
+                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. <code>*</code> is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit) instead of exact: <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
                     <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
                     <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
@@ -1912,6 +1912,13 @@
         // plus the number of "*" wildcards. When "Search UL only" is on,
         // wildcard slots must also be filled by a CC that has UL features.
         function comboMatchesAndGroup(combo, group) {
+            // A trailing "+" (with nothing after it) means "and at least one
+            // more unspecified band" - open-ended, no upper bound. Combined
+            // with "*" wildcards it means "and at least N more": "n78+*+"
+            // is n78 plus at least two other bands (one guaranteed by "*",
+            // at least one more from the trailing "+").
+            const openEnded = group.endsWith("+");
+
             const terms = group.split("+").filter(Boolean);
             const positiveBands = [];
             const negativeBands = [];
@@ -1954,17 +1961,20 @@
             );
             if (anyNegativeMatched) return false;
 
-            if (wildcardCount > 0) {
-                if (combo.cc.length !== usedCcIndexes.size + wildcardCount) return false;
-                // Every CC filling a wildcard slot must also satisfy the
-                // UL-only constraint when it's on, not just the named bands.
-                if (ulOnlyFilter) {
-                    return combo.cc.every((ccItem, index) =>
-                        usedCcIndexes.has(index) ||
-                        (ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0)
-                    );
+            if (wildcardCount > 0 || openEnded) {
+                // A CC only "counts" toward filling a wildcard/open-ended
+                // slot if it also satisfies the UL-only constraint when on -
+                // not just the named bands.
+                const qualifyingExtra = combo.cc.filter((ccItem, index) =>
+                    !usedCcIndexes.has(index) &&
+                    (!ulOnlyFilter || (ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0))
+                ).length;
+
+                if (openEnded) {
+                    return qualifyingExtra >= wildcardCount + 1;
                 }
-                return true;
+                const totalExtra = combo.cc.length - usedCcIndexes.size;
+                return totalExtra === wildcardCount && qualifyingExtra === wildcardCount;
             }
             return !exactComboFilter || usedCcIndexes.size === combo.cc.length;
         }
@@ -1996,6 +2006,7 @@
 
             // NR
             if (ran === 0) {
+                optionsHTML += `<option value="0" disabled>Idx: SCS, MIMO, Max BW, Modulation, 90MHz support</option>`;
                 featureSetList.forEach((feature, index) => {
                 let selected = (index + 1 === selectedValue) ? "selected" : '';
 
