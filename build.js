@@ -7,7 +7,7 @@ const outDir = path.join(__dirname, 'dist');
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir);
 
-for (const file of ['jszip.min.js', 'protobuf.min.js']) {
+for (const file of ['favicon.svg', 'jszip.min.js', 'protobuf.min.js']) {
     fs.copyFileSync(path.join(__dirname, file), path.join(outDir, file));
 }
 

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark" />
     <title>BinaryPB Band Editor</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="protobuf.min.js"></script>
     <script src="jszip.min.js"></script>
     <style>
@@ -1216,12 +1217,6 @@
 
         function changePageSize(newSize) {
             rowsPerPage = newSize === 'all' ? Infinity : parseInt(newSize, 10);
-            currentPage = 1; // Reset to first page when changing page size
-            generateTable(decodedData);
-        }
-
-        function changePageSize(newSize) {
-            rowsPerPage = parseInt(newSize, 10);
             currentPage = 1; // Reset to first page when changing page size
             generateTable(decodedData);
         }
