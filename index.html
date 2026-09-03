@@ -36,6 +36,7 @@
         input[type='text'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
         input[type='number'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
         .band-input { width: 60px; }
+        #bandFilterInput { width: 260px; }
         h3, h4 { color: var(--white), var(--dark-grey)}
 
         @media (prefers-color-scheme: light) {
@@ -171,9 +172,61 @@
         .ran-lte {
             background-color: light-dark(#eaf7ea, #17331c);
         }
+        .ran-mmwave {
+            background-color: light-dark(#f3e8ff, #33204a);
+        }
         .color-row {
             outline: 2px solid #f59e0b !important;
             outline-offset: -2px;
+        }
+        .rat-filter-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .rat-filter-group label {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            white-space: nowrap;
+        }
+        .row-color-legend {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 16px;
+            font-size: 11px;
+            padding: 4px 6px;
+            margin-bottom: 6px;
+            color: light-dark(#333, #ccc);
+        }
+        .row-color-legend .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .row-color-legend .legend-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        .row-color-legend .legend-swatch.ran-lte {
+            background-color: light-dark(#eaf7ea, #17331c);
+            border: 1px solid #4caf50;
+        }
+        .row-color-legend .legend-swatch.ran-nr {
+            background-color: light-dark(#e3f0ff, #16324a);
+            border: 1px solid #2196f3;
+        }
+        .row-color-legend .legend-swatch.ran-mmwave {
+            background-color: light-dark(#f3e8ff, #33204a);
+            border: 1px solid #9c27b0;
+        }
+        .row-color-legend .legend-swatch.color-row {
+            background-color: transparent;
+            border: 2px solid #f59e0b;
         }
         .main-table .combo-row:nth-of-type(even) {
             background-color: light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.03));
@@ -449,6 +502,10 @@
                 bottom: env(safe-area-inset-bottom);
                 background: var(--grey);
             }
+            .rat-filter-group {
+                justify-content: center;
+                padding: 4px 0;
+            }
             #pagination {
                 order: 1; /* Attempt to move pagination up if needed or style differently */
                 display: flex;
@@ -642,7 +699,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="header" id="mainHeader">
             <input type="file" title="Load a .binarybp uecapability file from a Pixel" id="fileInput" accept=".binarypb" />
             <select id="templateSelect" title="Load a stock Pixel 7 Pro (AU) profile as a starting point" onchange="if (this.value) { loadTemplateProfile(this.value); this.value = ''; }">
                 <option value="">Load stock profile...</option>
@@ -651,30 +708,8 @@
                 <option value="OPTUS">Optus</option>
                 <option value="VHA">VHA</option>
             </select>
-            <div id="bandFilter" style="display: none;">
-                <input type="text" id="bandFilterInput" placeholder="Filter e.g., 1+3+7C+n78+n78">
-                <label title="Show only combos containing exactly the searched component carriers, with no extras"><input type="checkbox" id="exactComboFilter" onchange="exactComboFilter = this.checked; generateTable(decodedData);"> Exact combo only</label>
-                <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; document.getElementById('exactComboFilter').checked=false; generateTable(decodedData);">Clear</button>
-            </div>
-            
-            <div id="pagination"></div>
-            <div id="pageSizeSelector" style="display: none;">
-                <label for="pageSizeDropdown">Per page:</label>
-                <select id="pageSizeDropdown" onchange="changePageSize(this.value)">
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                    <option value="all">All rows</option>
-                </select>
-            </div>
-            <div id="recompileBtn" style="display: none;">
-                <label for="filenameInput">Filename:</label>
-                <input type="text" id="filenameInput" value="" onchange="updateFilename(this.value)">
-                <button title="Download the compiled binarypb file" onclick="dlProtobuf()">↓ .binarypb</button>
-                <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
-            </div>
             <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
-            <button id="helpBtn" title="Show help" onclick="showHelpModal()">
+            <button id="helpBtn" title="Toggle help" onclick="toggleHelpModal()">
                 <span class="help-icon">?</span>
                 <span>Help</span>
             </button>
@@ -683,6 +718,36 @@
                 <span>View on GitHub</span>
             </a>
             <a class="build-badge" href="https://github.com/jchin14/binarypb-band-editor/commit/__BUILD_SHA__" target="_blank" rel="noopener" title="Currently deployed commit">Build __BUILD_SHA__</a>
+        </div>
+        <div class="header loaded-header" id="loadedControlsBar" style="display: none;">
+            <div id="bandFilter">
+                <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41">
+                <label title="Show only combos containing exactly the searched component carriers, with no extras"><input type="checkbox" id="exactComboFilter" onchange="exactComboFilter = this.checked; generateTable(decodedData);"> Exact combo only</label>
+                <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; document.getElementById('exactComboFilter').checked=false; generateTable(decodedData);">Clear</button>
+            </div>
+            <div id="ratFilterGroup" class="rat-filter-group" title="Show only combos whose bands are all within the checked network types">
+                <label><input type="checkbox" checked onchange="ratFilter['2G']=this.checked; generateTable(decodedData);"> 2G</label>
+                <label><input type="checkbox" checked onchange="ratFilter['3G']=this.checked; generateTable(decodedData);"> 3G</label>
+                <label><input type="checkbox" checked onchange="ratFilter['4G']=this.checked; generateTable(decodedData);"> 4G</label>
+                <label><input type="checkbox" checked onchange="ratFilter['5G']=this.checked; generateTable(decodedData);"> 5G</label>
+            </div>
+
+            <div id="pagination"></div>
+            <div id="pageSizeSelector">
+                <label for="pageSizeDropdown">Per page:</label>
+                <select id="pageSizeDropdown" onchange="changePageSize(this.value)">
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">All rows</option>
+                </select>
+            </div>
+            <div id="recompileBtn">
+                <label for="filenameInput">Filename:</label>
+                <input type="text" id="filenameInput" value="" onchange="updateFilename(this.value)">
+                <button title="Download the compiled binarypb file" onclick="dlProtobuf()">↓ .binarypb</button>
+                <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
+            </div>
         </div>
         <div id="tableContainer"></div>
         
@@ -810,14 +875,14 @@
         <div class="modal-content help-modal-content">
             <h3>Help</h3>
             <p class="help-more">For more detailed instructions, visit the <a href="https://github.com/jchin14/binarypb-band-editor#readme" target="_blank" rel="noopener">GitHub README</a>.</p>
-            <p class="help-disclaimer"><b>Disclaimer:</b> the stock Wildcard, Telstra, Optus, and VHA template profiles were pulled from a Pixel 7 Pro in Australia in August 2026. They may not match your device, carrier, or region, and may be outdated. Use them at your own risk — they may cause instability with calling or data. Test thoroughly before relying on a patched phone in an emergency.</p>
+            <p class="help-disclaimer"><b>Disclaimer:</b> the stock Wildcard, Telstra, Optus, and VHA template profiles were pulled from an Australian Pixel 7 Pro in August 2026. They may not match your device, carrier, or region, and may be outdated. Use them at your own risk — they may cause instability with calling or data. Test thoroughly before relying on a patched phone in an emergency.</p>
             <p class="help-disclaimer"><b>Note:</b> this editor has only been tested on desktop browsers. Mobile is not recommended.</p>
             <div class="help-section">
                 <h4>Top bar</h4>
                 <ul>
                     <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
-                    <li><b>Filter box</b> — show only combos matching a band string, e.g. <code>1+3+7C+n78</code>.</li>
+                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>.</li>
                     <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
                     <li><b>Pagination / Per page</b> — move between pages of combos and control how many are shown at once.</li>
@@ -946,11 +1011,14 @@
         window.onmousedown = function(event) {
             const jsonModal = document.getElementById('jsonModal');
             const customFeatureModal = document.getElementById('customFeatureModal');
-    
+            const helpModal = document.getElementById('helpModal');
+
             if (event.target === jsonModal) {
                 closeModal();
             } else if (event.target === customFeatureModal) {
                 closeCustomFeatureModal();
+            } else if (event.target === helpModal) {
+                closeHelpModal();
             }
         };
         // Close json modal on esc
@@ -1253,6 +1321,22 @@
         let rowsPerPage = 20;
         let bandFilter = "";
         let exactComboFilter = false;
+        let ratFilter = { '2G': true, '3G': true, '4G': true, '5G': true };
+
+        // This format only ever encodes LTE (4G) and NR (5G) bands, so 2G/3G
+        // combos never exist - those checkboxes just filter everything out.
+        function bandRat(band) {
+            return band > 10000 ? '5G' : '4G';
+        }
+
+        function comboMatchesRatFilter(combo) {
+            return combo.cc.every(ccItem => ratFilter[bandRat(ccItem.band)]);
+        }
+
+        function applyRatFilter(comboGroups) {
+            if (ratFilter['2G'] && ratFilter['3G'] && ratFilter['4G'] && ratFilter['5G']) return comboGroups;
+            return comboGroups.filter(group => group.combo.some(combo => comboMatchesRatFilter(combo)));
+        }
         let filteredGroups = [];
         let globalIndexMap = []; // Stores correct indices after filtering & pagination
         const selectedCombos = new Set();
@@ -1288,7 +1372,7 @@
         }
 
         function generateTable(decodedData) {
-            filteredGroups = applyBandFilter(decodedData.ComboGroups);
+            filteredGroups = applyRatFilter(applyBandFilter(decodedData.ComboGroups));
             let totalRows = filteredGroups.length;
             let totalPages = rowsPerPage === Infinity ? 1 : Math.ceil(totalRows / rowsPerPage);
             const visibleCombos = currentFilteredCombos();
@@ -1308,7 +1392,7 @@
                     </span>
                 <span id="infoPatches">Patches:
                     <span class="patches-grid">
-                        <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
+                        <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch ${bitMaskToggled ? "ON" : "OFF"}</button>
                         <span class="patch-hint patch-hint-required">⚠ Required on Pixel 7/8</span>
                         <button title="Auto-set from your imported file — don't touch unless you know what you're doing. If present, it must match the value your phone's currently active binarypb has." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
                         <span class="patch-hint patch-hint-caution">⚠ Integrity is auto-set from your file, don't touch unless you know what you're doing</span>
@@ -1331,6 +1415,12 @@
             if (totalRows > 0) {
                 tableHTML += `<tr class="combo-col-titles-row">
                     <td>
+                        <div class="row-color-legend">
+                            <span class="legend-item"><span class="legend-swatch ran-lte"></span> LTE (4G)</span>
+                            <span class="legend-item"><span class="legend-swatch ran-nr"></span> NR sub-6 (5G)</span>
+                            <span class="legend-item"><span class="legend-swatch ran-mmwave"></span> NR mmWave (5G)</span>
+                            <span class="legend-item"><span class="legend-swatch color-row"></span> Has UL feature</span>
+                        </div>
                         <div class="combo-col-titles-bar">
                             <span class="title-col title-col-band">Band</span>
                             <span class="title-col title-col-bw">BW</span>
@@ -1382,7 +1472,8 @@
 
                         // 0 is NR, 1 is LTE (Later on LTE DL = 1, LTE UL = 2)
                         let ran = (ccItem.band > 10000) ? 0 : 1;
-                        let rowClass = (ran === 0 ? "ran-nr" : "ran-lte") + (hasUlFeature ? " color-row" : ""); // Tint by RAN type, highlight if ulFeaturePerCCIds exists
+                        let isMmwave = ran === 0 && (ccItem.band - 10000) > 250; // anything above n250 is FR2/mmWave
+                        let rowClass = (isMmwave ? "ran-mmwave" : (ran === 0 ? "ran-nr" : "ran-lte")) + (hasUlFeature ? " color-row" : ""); // Tint by RAN type, highlight if ulFeaturePerCCIds exists
 
                         let bandInput = `<span class="cc-index">${ccIndex + 1}</span><input name="band-input" type="text" class="band-input" value="${bandParseInt(ccItem.bwClassDL,ccItem.band)}"
                             onchange="updateBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, this.value)" />`;
@@ -1498,10 +1589,24 @@
             updatePaginationControls(totalPages);
             tableHTML += `</table>`;
             document.getElementById("tableContainer").innerHTML = tableHTML;
+            document.getElementById("loadedControlsBar").style.display = "flex";
             document.getElementById("recompileBtn").style.display = "block";
             document.getElementById("bandFilter").style.display = "block";
+            document.getElementById("ratFilterGroup").style.display = "flex";
             document.getElementById("pageSizeSelector").style.display = "block";
+            syncLoadedControlsBarOffset();
         }
+
+        // Keeps the second (loaded-profile) sticky bar pinned directly below the
+        // main header, whose height varies with viewport width/wrapping.
+        function syncLoadedControlsBarOffset() {
+            const mainHeader = document.getElementById("mainHeader");
+            const loadedBar = document.getElementById("loadedControlsBar");
+            if (mainHeader && loadedBar) {
+                loadedBar.style.top = mainHeader.offsetHeight + "px";
+            }
+        }
+        window.addEventListener("resize", syncLoadedControlsBarOffset);
 
         function parseBcs(value) {
             if ((value >>> 0) === 0xFFFFFFFF) {
@@ -1717,31 +1822,47 @@
         });
 
         function applyBandFilter(comboGroups) {
-            if (!bandFilter) return comboGroups; // No filter applied
-
-            // Trim any space and trailing "+" to avoid issues
-            bandFilter = bandFilter.replace(/\s+/g, "").replace(/\+$/, "");
-
-            // Parse filter bands and extract both band and optional bwClassDL
-            let filterBands = bandFilter.split("+").map(band => bandParseStr(band)); // Convert "n78C" or similar
-
-            // If no valid filter bands, return the full set of combos
-            if (filterBands.length === 0) return comboGroups;
+            const expr = bandFilter.replace(/\s+/g, "");
+            if (!expr) return comboGroups; // No filter applied
 
             return comboGroups.filter(group =>
-                group.combo.some(combo => comboMatchesBandFilter(combo, filterBands))
+                group.combo.some(combo => comboMatchesFilterExpression(combo, expr))
             );
         }
 
-        // Each filter term must match a different component carrier. This makes
-        // n78+n78 mean two n78 carriers, rather than matching one n78 twice.
-        function comboMatchesBandFilter(combo, filterBands) {
+        // Filter syntax: "+" = AND, "|" = OR, "!" prefix = NOT, "^" = XOR
+        // (exactly one side must match), e.g. "1+3+7C | !n78 | n78^n41".
+        function comboMatchesFilterExpression(combo, expr) {
+            if (expr.includes("^")) {
+                const parts = expr.split("^").filter(Boolean);
+                const matchCount = parts.filter(part => comboMatchesFilterExpression(combo, part)).length;
+                return matchCount === 1;
+            }
+
+            const orGroups = expr.split("|").filter(Boolean);
+            return orGroups.some(group => comboMatchesAndGroup(combo, group));
+        }
+
+        // Each positive term must match a different component carrier. This
+        // makes n78+n78 mean two n78 carriers, not one n78 matched twice.
+        function comboMatchesAndGroup(combo, group) {
+            const terms = group.split("+").filter(Boolean);
+            const positiveBands = [];
+            const negativeBands = [];
+            terms.forEach(term => {
+                if (term.startsWith("!")) {
+                    negativeBands.push(bandParseStr(term.slice(1)));
+                } else {
+                    positiveBands.push(bandParseStr(term));
+                }
+            });
+
             const usedCcIndexes = new Set();
-            const orderedFilters = [...filterBands].sort((a, b) =>
+            const orderedPositive = [...positiveBands].sort((a, b) =>
                 Number(b.bwClassDL !== 0) - Number(a.bwClassDL !== 0)
             );
 
-            const allFiltersMatched = orderedFilters.every(filterBand => {
+            const allPositiveMatched = orderedPositive.every(filterBand => {
                 const ccIndex = combo.cc.findIndex((ccItem, index) =>
                     !usedCcIndexes.has(index) &&
                     ccItem.band === filterBand.band &&
@@ -1751,17 +1872,26 @@
                 usedCcIndexes.add(ccIndex);
                 return true;
             });
-            return allFiltersMatched && (!exactComboFilter || usedCcIndexes.size === combo.cc.length);
+            if (!allPositiveMatched) return false;
+
+            const anyNegativeMatched = negativeBands.some(filterBand =>
+                combo.cc.some(ccItem =>
+                    ccItem.band === filterBand.band &&
+                    (filterBand.bwClassDL === 0 || ccItem.bwClassDL === filterBand.bwClassDL)
+                )
+            );
+            if (anyNegativeMatched) return false;
+
+            return !exactComboFilter || usedCcIndexes.size === combo.cc.length;
         }
 
         function updatePaginationControls(totalPages) {
             let paginationHTML = `
-                <button onclick="changePage(-1000)" ${currentPage === 1 ? "disabled" : ""}>«</button>
+                <button title="First page" onclick="changePage(-Infinity)" ${currentPage === 1 ? "disabled" : ""}>«</button>
                 <button onclick="changePage(-1)" ${currentPage === 1 ? "disabled" : ""}>Prev</button>
                 <span>${currentPage}/${totalPages}</span>
                 <button onclick="changePage(1)" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
-                
-                
+                <button title="Last page" onclick="changePage(Infinity)" ${currentPage === totalPages ? "disabled" : ""}>»</button>
             `;
             document.getElementById("pagination").innerHTML = paginationHTML;
         }
@@ -2154,7 +2284,7 @@
             setTimeout(() => {
                 let button = document.getElementById("bitMaskToggleBtn");
                 if (button) {
-                    button.textContent = bitMaskToggled ? "Apply BM 0 patch" : "Apply BM 65k patch";
+                    button.textContent = bitMaskToggled ? "Apply BM 65k patch ON" : "Apply BM 65k patch OFF";
                 }
             }, 10); // Small delay to ensure it updates properly
 
@@ -2304,6 +2434,15 @@
 
         function showHelpModal() {
             document.getElementById("helpModal").style.display = "block";
+        }
+
+        function toggleHelpModal() {
+            const helpModal = document.getElementById("helpModal");
+            if (helpModal.style.display === "block") {
+                closeHelpModal();
+            } else {
+                showHelpModal();
+            }
         }
 
         function closeHelpModal() {

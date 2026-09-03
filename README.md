@@ -94,7 +94,7 @@ Do not directly overwrite `/vendor/firmware/uecapconfig/...`: the vendor partiti
 
 ## Contributing
 
-Pull requests are welcome. Please keep changes focused, describe what you tested, and avoid committing private carrier profiles or device identifiers.
+Pull requests are welcome. Please keep changes focused and describe what you tested.
 
 ## Special thanks
 
