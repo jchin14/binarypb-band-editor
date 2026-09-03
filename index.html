@@ -454,7 +454,10 @@
             color: #666;
             padding: 0px;
             display: flex;
+            flex-wrap: wrap;
             justify-content: right;
+            align-items: center;
+            row-gap: 2px;
             font-size: 10px;
             margin: -2px 2px 0px 0px;
         }
@@ -723,7 +726,8 @@
             <div id="bandFilter">
                 <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41">
                 <label title="Show only combos containing exactly the searched component carriers, with no extras"><input type="checkbox" id="exactComboFilter" onchange="exactComboFilter = this.checked; generateTable(decodedData);"> Exact combo only</label>
-                <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; document.getElementById('exactComboFilter').checked=false; generateTable(decodedData);">Clear</button>
+                <label title="Only match a band if that component carrier actually has uplink features declared, not just present for downlink"><input type="checkbox" id="ulOnlyFilter" onchange="ulOnlyFilter = this.checked; generateTable(decodedData);"> Search UL only</label>
+                <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; ulOnlyFilter=false; document.getElementById('exactComboFilter').checked=false; document.getElementById('ulOnlyFilter').checked=false; generateTable(decodedData);">Clear</button>
             </div>
             <div id="ratFilterGroup" class="rat-filter-group" title="Show only combos whose bands are all within the checked network types">
                 <label><input type="checkbox" checked onchange="ratFilter['2G']=this.checked; generateTable(decodedData);"> 2G</label>
@@ -882,8 +886,9 @@
                 <ul>
                     <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
-                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>.</li>
+                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. A trailing <code>+</code> means "plus N other unspecified CCs": <code>n78+</code> matches combos with n78 and exactly one other band; <code>n78++</code> matches n78 plus exactly two others.</li>
                     <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
+                    <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
                     <li><b>Pagination / Per page</b> — move between pages of combos and control how many are shown at once.</li>
                     <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
@@ -914,7 +919,8 @@
                     <li><b>bcsNr / bcsIntraENDC / bcsEutra</b> — per-group band combination set bitmasks.</li>
                     <li><b>powerClass</b> — 0 for default, 1 to force Power Class 2.</li>
                     <li><b>intraEndc</b> — intra-band EN-DC support flag for the group.</li>
-                    <li><b>Band input, ↑ ↓ - +</b> — edit a component carrier's band, reorder, remove, or add another band to the combo.</li>
+                    <li><b>Band input, ↑ ↓ - +</b> — edit a component carrier's band, reorder, remove, or add another band to the combo. The letter after the band number (e.g. n78<b>A</b>) is its bandwidth class — a per-band index (A=1, B=2, C=3, ...) defined by the 3GPP spec, not a universal size. A band with no letter has no class set at all (<code>bwClassDL</code> = 0) — real stock profiles always have a letter here, so leaving it blank isn't the same as "A" and likely won't work correctly on the phone.</li>
+                    <li><b>BW / F# columns</b> — read-only indicators next to the band input. <b>BW</b> shows <code>bwClassDL/bwClassUL</code> (the downlink/uplink bandwidth class numbers behind the letter). <b>F#</b> shows <code>dlFeatureIndex/ulFeatureIndex</code> (which entry in the DL/UL feature-set list this carrier uses).</li>
                     <li><b>DL / UL feature dropdowns, - +</b> — assign or remove feature sets (MIMO/bandwidth class) per carrier direction.</li>
                     <li><b>Checkbox (per row)</b> — selects this combo for the bulk actions above.</li>
                     <li><b>JSON / Copy / Remove (per row)</b> — edit this combo as raw JSON, duplicate it, or delete it.</li>
@@ -1321,6 +1327,7 @@
         let rowsPerPage = 20;
         let bandFilter = "";
         let exactComboFilter = false;
+        let ulOnlyFilter = false;
         let ratFilter = { '2G': true, '3G': true, '4G': true, '5G': true };
 
         // This format only ever encodes LTE (4G) and NR (5G) bands, so 2G/3G
@@ -1595,6 +1602,8 @@
             document.getElementById("ratFilterGroup").style.display = "flex";
             document.getElementById("pageSizeSelector").style.display = "block";
             syncLoadedControlsBarOffset();
+            syncMobileFixedBarPadding();
+            syncColumnTitleWidths();
         }
 
         // Keeps the second (loaded-profile) sticky bar pinned directly below the
@@ -1607,6 +1616,53 @@
             }
         }
         window.addEventListener("resize", syncLoadedControlsBarOffset);
+
+        // The Band/BW/F#/DL/UL title bar lives outside the combo table (so it
+        // isn't nested inside the first combo's own card), so it has no
+        // built-in way to line up with that table's actual column widths.
+        // Measure the first real data row's cells and copy their rendered
+        // widths onto the title bar's columns.
+        function syncColumnTitleWidths() {
+            const titleBar = document.querySelector(".combo-col-titles-bar");
+            const firstDataRow = document.querySelector(".combo-table tr");
+            if (!titleBar || !firstDataRow) return;
+
+            const cells = firstDataRow.querySelectorAll("td");
+            const mapping = [
+                [".title-col-band", 0],
+                [".title-col-bw", 1],
+                [".title-col-feat", 2],
+                [".title-col-dl", 3],
+                [".title-col-ul", 4],
+            ];
+            mapping.forEach(([selector, index]) => {
+                const titleEl = titleBar.querySelector(selector);
+                const dataCell = cells[index];
+                if (titleEl && dataCell) {
+                    titleEl.style.width = dataCell.getBoundingClientRect().width + "px";
+                }
+            });
+        }
+        window.addEventListener("resize", syncColumnTitleWidths);
+
+        // On mobile, #bandFilter and #pagination are docked as separate
+        // fixed bars at the bottom of the screen, overlapping table content
+        // beneath them. Reserve enough bottom padding to clear whichever is
+        // taller, since their height grows as filter controls are added.
+        function syncMobileFixedBarPadding() {
+            const bandFilterEl = document.getElementById("bandFilter");
+            const paginationEl = document.getElementById("pagination");
+            const tableContainer = document.getElementById("tableContainer");
+            if (!bandFilterEl || !paginationEl || !tableContainer) return;
+
+            if (getComputedStyle(bandFilterEl).position !== "fixed") {
+                tableContainer.style.paddingBottom = "";
+                return;
+            }
+            const barHeight = Math.max(bandFilterEl.offsetHeight, paginationEl.offsetHeight);
+            tableContainer.style.paddingBottom = (barHeight + 16) + "px";
+        }
+        window.addEventListener("resize", syncMobileFixedBarPadding);
 
         function parseBcs(value) {
             if ((value >>> 0) === 0xFFFFFFFF) {
@@ -1845,7 +1901,20 @@
 
         // Each positive term must match a different component carrier. This
         // makes n78+n78 mean two n78 carriers, not one n78 matched twice.
+        //
+        // A run of trailing "+" at the end of the group means "plus N other
+        // (unspecified) component carriers": "n78+" matches combos with n78
+        // and exactly one other CC; "n78++" matches n78 plus exactly two
+        // other CCs. This forces the combo's total CC count to equal the
+        // number of matched terms plus that trailing-"+" count.
         function comboMatchesAndGroup(combo, group) {
+            let wildcardCount = 0;
+            const trailingPlus = group.match(/\++$/);
+            if (trailingPlus) {
+                wildcardCount = trailingPlus[0].length;
+                group = group.slice(0, -wildcardCount);
+            }
+
             const terms = group.split("+").filter(Boolean);
             const positiveBands = [];
             const negativeBands = [];
@@ -1857,6 +1926,14 @@
                 }
             });
 
+            // When "Search UL only" is ticked, a term only matches a CC that
+            // actually has uplink feature IDs declared (i.e. is used for UL),
+            // not just present in the combo for downlink.
+            const ccMatchesBand = (ccItem, filterBand) =>
+                ccItem.band === filterBand.band &&
+                (filterBand.bwClassDL === 0 || ccItem.bwClassDL === filterBand.bwClassDL) &&
+                (!ulOnlyFilter || (ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0));
+
             const usedCcIndexes = new Set();
             const orderedPositive = [...positiveBands].sort((a, b) =>
                 Number(b.bwClassDL !== 0) - Number(a.bwClassDL !== 0)
@@ -1864,9 +1941,7 @@
 
             const allPositiveMatched = orderedPositive.every(filterBand => {
                 const ccIndex = combo.cc.findIndex((ccItem, index) =>
-                    !usedCcIndexes.has(index) &&
-                    ccItem.band === filterBand.band &&
-                    (filterBand.bwClassDL === 0 || ccItem.bwClassDL === filterBand.bwClassDL)
+                    !usedCcIndexes.has(index) && ccMatchesBand(ccItem, filterBand)
                 );
                 if (ccIndex === -1) return false;
                 usedCcIndexes.add(ccIndex);
@@ -1875,13 +1950,13 @@
             if (!allPositiveMatched) return false;
 
             const anyNegativeMatched = negativeBands.some(filterBand =>
-                combo.cc.some(ccItem =>
-                    ccItem.band === filterBand.band &&
-                    (filterBand.bwClassDL === 0 || ccItem.bwClassDL === filterBand.bwClassDL)
-                )
+                combo.cc.some(ccItem => ccMatchesBand(ccItem, filterBand))
             );
             if (anyNegativeMatched) return false;
 
+            if (wildcardCount > 0) {
+                return combo.cc.length === usedCcIndexes.size + wildcardCount;
+            }
             return !exactComboFilter || usedCcIndexes.size === combo.cc.length;
         }
 
