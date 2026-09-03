@@ -3144,7 +3144,8 @@
 
             const customizesh_file = `ui_print "- BinaryPB Band Editor"
 ui_print "  by jchin14 - https://github.com/jchin14/binarypb-band-editor"
-ui_print "  ${originalFilename}: ${comboCount} combos"
+ui_print "  ${originalFilename}: ${comboCount} combos"${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? `
+ui_print "  Also overwriting WILDCARD"` : ""}
 set_perm_recursive $MODPATH 0 0 0755 0644
 chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/${originalFilename}.binarypb${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? `
 chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/WILDCARD.binarypb` : ""}`;
