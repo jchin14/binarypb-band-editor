@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark" />
     <title>BinaryPB Band Editor</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
     <script src="protobuf.min.js"></script>
     <script src="jszip.min.js"></script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
     <style>
         :root {
             color-scheme: light dark;
@@ -35,6 +40,7 @@
         input[type='text'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
         input[type='number'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
         .band-input { width: 60px; }
+        #bandFilterInput { width: 260px; }
         h3, h4 { color: var(--white), var(--dark-grey)}
 
         @media (prefers-color-scheme: light) {
@@ -78,6 +84,7 @@
         .combo-table {
             width: auto;
             border: 0px;
+            margin: 0;
         }
         @media (min-width: 769px) {
             .main-table {
@@ -94,6 +101,10 @@
             }
         }
         .combo-number {
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            z-index: 2;
             display: inline-block;
             background-color: var(--accent);
             color: white;
@@ -101,34 +112,55 @@
             font-size: 9px;
             padding: 0px 5px;
             border-radius: 999px;
-            margin-bottom: 1px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.4);
         }
-        .combo-col-titles th {
+        .combo-col-titles-row td {
+            padding: 0;
+            border: none;
+        }
+        .combo-col-titles-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
             background-color: light-dark(var(--blue), var(--dark-grey));
             color: white;
             font-size: 10px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.03em;
-            text-align: left;
-            padding: 2px 5px;
+            padding: 4px 6px;
+            border-radius: var(--radius);
+            margin-bottom: 6px;
+        }
+        .title-col-band, .combo-col-band {
+            width: 195px;
+            box-sizing: border-box;
+        }
+        .title-col-bw, .combo-col-bw {
+            width: 36px;
+            box-sizing: border-box;
+        }
+        .title-col-feat, .combo-col-feat {
+            width: 32px;
+            box-sizing: border-box;
+        }
+        .title-col-dl, .title-col-ul {
+            width: clamp(200px, 32vw, 520px);
         }
         .combo-col-band, .combo-col-bw, .combo-col-feat {
             white-space: nowrap;
-        }
-        .combo-col-titles .combo-col-dl,
-        .combo-col-titles .combo-col-ul {
-            width: 260px;
+            overflow: hidden;
         }
         .cc-feature-cell {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 2px;
-            width: 260px;
+            width: clamp(200px, 32vw, 520px);
             box-sizing: border-box;
         }
         .combo-table select[name="FeatureId"] {
-            width: 70%;
+            flex: 1 1 auto;
             min-width: 120px;
         }
         .combo-table td, .combo-table th {
@@ -148,17 +180,85 @@
             margin-right: 2px;
         }
         .ran-nr {
-            background-color: light-dark(#e3f0ff, #16324a);
+            background-color: light-dark(#e3f0ff, #1c3f61);
         }
         .ran-lte {
-            background-color: light-dark(#eaf7ea, #17331c);
+            background-color: light-dark(#eaf7ea, #1e4626);
         }
-        .color-row {
-            outline: 2px solid #f59e0b !important;
-            outline-offset: -2px;
+        .ran-mmwave {
+            background-color: light-dark(#f3e8ff, #422a63);
+        }
+        /* Inset box-shadow instead of outline/border so the orange highlight
+           stays purely decorative and never affects cell sizing/alignment.
+           When two UL-feature rows are adjacent, the second one's top edge
+           is dropped so only one line shows between them, not a doubled one. */
+        .color-row td {
+            box-shadow:
+                inset 2px 0 0 #f59e0b,
+                inset -2px 0 0 #f59e0b,
+                inset 0 2px 0 #f59e0b,
+                inset 0 -2px 0 #f59e0b;
+        }
+        .color-row + .color-row td {
+            box-shadow:
+                inset 2px 0 0 #f59e0b,
+                inset -2px 0 0 #f59e0b,
+                inset 0 -2px 0 #f59e0b;
+        }
+        .rat-filter-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .rat-filter-group label {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            white-space: nowrap;
+        }
+        .row-color-legend {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 16px;
+            font-size: 11px;
+            padding: 4px 6px;
+            margin-bottom: 6px;
+            color: light-dark(#333, #ccc);
+        }
+        .row-color-legend .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .row-color-legend .legend-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        .row-color-legend .legend-swatch.ran-lte {
+            background-color: light-dark(#eaf7ea, #1e4626);
+            border: 1px solid #4caf50;
+        }
+        .row-color-legend .legend-swatch.ran-nr {
+            background-color: light-dark(#e3f0ff, #1c3f61);
+            border: 1px solid #2196f3;
+        }
+        .row-color-legend .legend-swatch.ran-mmwave {
+            background-color: light-dark(#f3e8ff, #422a63);
+            border: 1px solid #9c27b0;
+        }
+        .row-color-legend .legend-swatch.color-row {
+            background-color: transparent;
+            border: 2px solid #f59e0b;
         }
         .main-table .combo-row:nth-of-type(even) {
-            background-color: light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.03));
+            background-color: light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.07));
+        }
+        .combo-table-wrapper {
+            position: relative;
         }
         .band-input {
             width: 45px;
@@ -202,6 +302,17 @@
             height: 16px;
             fill: white;
         }
+        .build-badge {
+            color: light-dark(rgba(255,255,255,0.75), rgba(255,255,255,0.55));
+            text-decoration: none;
+            font-size: 11px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            white-space: nowrap;
+        }
+        .build-badge:hover {
+            color: white;
+            text-decoration: underline;
+        }
         #helpBtn {
             display: inline-flex;
             align-items: center;
@@ -236,30 +347,39 @@
             line-height: 1;
         }
         .buttons {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 8px;
+            align-items: center;
         }
         .combo-select {
             width: 18px;
             height: 18px;
-            margin: 0 0 8px;
+            margin: 0;
+            justify-self: start;
         }
         #tableContainer {
             padding-top: 12px;
         }
         .btn-json {
-            margin-bottom: 5px;
+            margin-bottom: 0;
         }
         .modal {
             display: none;
             position: fixed;
-            z-index: 1;
+            z-index: 3;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
             background-color: #00000066;
+        }
+        /* Can be opened on top of another already-open modal (e.g. picking a
+           zip entry while the Compare modal is open) -- needs to paint above
+           it regardless of DOM order. */
+        #zipEntryModal, #bmPatchModal {
+            z-index: 4;
         }
         .modal-content {
             background-color: light-dark(var(--white), var(--dark-grey));
@@ -279,6 +399,28 @@
             width: 50%;
             max-height: 80vh;
             overflow-y: auto;
+        }
+        .compare-modal-content {
+            width: 60%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .compare-meta-table {
+            width: 100%;
+            margin: 10px 0;
+            border-collapse: collapse;
+        }
+        .compare-meta-table th, .compare-meta-table td {
+            border: 1px solid light-dark(var(--offwhite), var(--grey));
+            padding: 4px 8px;
+            text-align: left;
+        }
+        .compare-combo-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 4px 0 12px;
+            padding-left: 20px;
+            font-size: 13px;
         }
         .help-section h4 {
             margin-bottom: 4px;
@@ -307,6 +449,15 @@
         .help-more a {
             color: light-dark(var(--blue), #8bb7f0);
             font-weight: 600;
+        }
+        .help-disclaimer {
+            margin: 0 0 16px;
+            padding: 8px 10px;
+            border-radius: var(--radius);
+            border: 1px solid #f59e0b;
+            background-color: light-dark(#fff7e6, #3a2c0f);
+            font-size: 12px;
+            line-height: 1.4;
         }
         #customFeatureModal .modal-content label {
             display: inline-block;
@@ -337,11 +488,55 @@
             display: flex;
             justify-content: space-evenly;
         }
+        .patches-grid {
+            display: inline-grid;
+            grid-template-columns: auto auto;
+            column-gap: 8px;
+            row-gap: 2px;
+            align-items: center;
+            vertical-align: middle;
+        }
+        .patch-hint {
+            font-size: 11px;
+            font-weight: 600;
+            text-align: left;
+        }
+        .patch-hint-required {
+            color: light-dark(#b45309, #f0b429);
+        }
+        .patch-hint-caution {
+            color: light-dark(#b91c1c, #f87171);
+        }
+        .zip-entry-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 10px 0;
+            max-height: 45vh;
+            overflow-y: auto;
+        }
+        .zip-entry-list button {
+            width: 100%;
+            text-align: left;
+            padding: 8px 10px;
+        }
+        .bulk-edit-banner {
+            background-color: #f59e0b;
+            color: #1a1a1a;
+            font-weight: 700;
+            text-align: center;
+            padding: 6px 10px;
+            border-radius: var(--radius);
+            margin: 0 5px 6px;
+        }
         .groupheader {
-            color: #666;
+            color: light-dark(#666, #aaa);
             padding: 0px;
             display: flex;
+            flex-wrap: wrap;
             justify-content: right;
+            align-items: center;
+            row-gap: 2px;
             font-size: 10px;
             margin: -2px 2px 0px 0px;
         }
@@ -358,9 +553,6 @@
         }
         .fsaddbtn {
             width: 100%;
-        }
-        .combodirind {
-            display: none !important;
         }
         @media (max-width: 768px) {
 
@@ -392,6 +584,10 @@
                 bottom: env(safe-area-inset-bottom);
                 background: var(--grey);
             }
+            .rat-filter-group {
+                justify-content: center;
+                padding: 4px 0;
+            }
             #pagination {
                 order: 1; /* Attempt to move pagination up if needed or style differently */
                 display: flex;
@@ -415,6 +611,10 @@
                 order: -2;
                 justify-content: center;
                 margin: 4px 0;
+            }
+            .build-badge {
+                order: -1;
+                text-align: center;
             }
             .help-modal-content {
                 width: 90%;
@@ -466,14 +666,25 @@
                 flex-wrap: wrap;
                 align-items: center;
             }
-            .combo-col-titles {
+            .combo-col-titles-row {
                 display: none !important;
             }
             .cc-feature-cell {
                 width: 100% !important;
             }
-            .combodirind {
-            display: flex !important;
+            .combo-col-dl::before {
+                content: "DL";
+                display: block;
+                width: 100%;
+                font-size: 10px;
+                color: light-dark(#666, #aaa);
+            }
+            .combo-col-ul::before {
+                content: "UL";
+                display: block;
+                width: 100%;
+                font-size: 10px;
+                color: light-dark(#666, #aaa);
             }
             .bandextraind {
                 display: none !important;
@@ -570,16 +781,41 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <input type="file" title="Load a .binarybp uecapability file from a Pixel" id="fileInput" accept=".binarypb" />
-            <div id="bandFilter" style="display: none;">
-                <input type="text" id="bandFilterInput" placeholder="Filter e.g., 1+3+7C+n78+n78">
-                <label title="Show only combos containing exactly the searched component carriers, with no extras"><input type="checkbox" id="exactComboFilter" onchange="exactComboFilter = this.checked; generateTable(decodedData);"> Exact combo only</label>
-                <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; document.getElementById('exactComboFilter').checked=false; generateTable(decodedData);">Clear</button>
+        <div class="header" id="mainHeader">
+            <input type="file" title="Load a .binarypb file, or a Magisk module .zip containing one" id="fileInput" accept=".binarypb,.zip" />
+            <button id="newProfileBtn" title="Start a brand new empty profile from scratch" onclick="startNewProfile()">+ New profile</button>
+            <select id="templateSelect" title="Load a stock Pixel 7 Pro (AU) profile as a starting point" onchange="if (this.value) { loadTemplateProfile(this.value); this.value = ''; }">
+                <option value="">Load stock profile...</option>
+                <option value="WILDCARD">Wildcard</option>
+                <option value="TELSTRA">Telstra</option>
+                <option value="OPTUS">Optus</option>
+                <option value="VHA">VHA</option>
+            </select>
+            <button id="compareBtn" title="Compare the loaded profile against another .binarypb or Magisk zip" onclick="showCompareModal()">⇄ Compare</button>
+            <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
+            <button id="helpBtn" title="Toggle help" onclick="toggleHelpModal()">
+                <span class="help-icon">?</span>
+                <span>Help</span>
+            </button>
+            <a class="github-link" href="https://github.com/jchin14/binarypb-band-editor" target="_blank" rel="noopener" title="View source on GitHub">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                <span>View on GitHub</span>
+            </a>
+            <a class="build-badge" href="https://github.com/jchin14/binarypb-band-editor/commit/__BUILD_SHA__" target="_blank" rel="noopener" title="Currently deployed commit">Build __BUILD_SHA__</a>
+        </div>
+        <div class="header loaded-header" id="loadedControlsBar" style="display: none;">
+            <div id="bandFilter">
+                <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41 | n78*" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41   Wildcard (exactly one other CC): n78+*   Open-ended (at least one/N more): n78+ / n78+*+   Contains (n78 alone or with anything else): n78*">
+                <label title="Only match a band if that component carrier actually has uplink features declared, not just present for downlink"><input type="checkbox" id="ulOnlyFilter" onchange="ulOnlyFilter = this.checked; generateTable(decodedData);"> Search UL only</label>
+                <button onclick="bandFilter=''; bandFilterInput.value=''; ulOnlyFilter=false; document.getElementById('ulOnlyFilter').checked=false; generateTable(decodedData);">Clear</button>
             </div>
-            
+            <div id="ratFilterGroup" class="rat-filter-group" title="Show only combos whose bands are all within the checked network types">
+                <label><input type="checkbox" checked onchange="ratFilter['4G']=this.checked; generateTable(decodedData);"> 4G</label>
+                <label><input type="checkbox" checked onchange="ratFilter['5G']=this.checked; generateTable(decodedData);"> 5G</label>
+            </div>
+
             <div id="pagination"></div>
-            <div id="pageSizeSelector" style="display: none;">
+            <div id="pageSizeSelector">
                 <label for="pageSizeDropdown">Per page:</label>
                 <select id="pageSizeDropdown" onchange="changePageSize(this.value)">
                     <option value="20">20</option>
@@ -588,21 +824,13 @@
                     <option value="all">All rows</option>
                 </select>
             </div>
-            <div id="recompileBtn" style="display: none;">
+            <div id="recompileBtn">
                 <label for="filenameInput">Filename:</label>
                 <input type="text" id="filenameInput" value="" onchange="updateFilename(this.value)">
                 <button title="Download the compiled binarypb file" onclick="dlProtobuf()">↓ .binarypb</button>
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
+                <label title="Also overlay this same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads"><input type="checkbox" id="alsoOverrideWildcard" onchange="alsoOverrideWildcard = this.checked;"> Also override WILDCARD</label>
             </div>
-            <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
-            <button id="helpBtn" title="Show help" onclick="showHelpModal()">
-                <span class="help-icon">?</span>
-                <span>Help</span>
-            </button>
-            <a class="github-link" href="https://github.com/jchin14/binarypb-band-editor" target="_blank" rel="noopener" title="View source on GitHub">
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
-                <span>View on GitHub</span>
-            </a>
         </div>
         <div id="tableContainer"></div>
         
@@ -725,22 +953,76 @@
         </div>
     </div>
 
+    <div id="bmPatchModal" class="modal">
+        <div class="modal-content">
+            <h3>Which phone?</h3>
+            <p>Is this being installed on a Pixel 7 or Pixel 8?</p>
+            <p style="font-size: 12px;">The BM 65k patch is required on those devices to enable all bands. It isn't needed on Pixel 9 (where this field is always 0) and its effect on other phones is unknown.</p>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" id="bmPatchNoBtn">No</button>
+                <button class="modalbtn" id="bmPatchYesBtn">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="zipEntryModal" class="modal">
+        <div class="modal-content">
+            <h3>Choose a profile</h3>
+            <p>This zip contains multiple .binarypb files. Pick which one to open.</p>
+            <div id="zipEntryList" class="zip-entry-list"></div>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" id="zipEntryCancelBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadModeModal" class="modal">
+        <div class="modal-content">
+            <h3>Load profile</h3>
+            <p>A profile is already loaded. Do you want to add this file's combos to it, or replace it completely?</p>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" onclick="closeLoadModeModal()">Cancel</button>
+                <button class="modalbtn" onclick="resolveLoadMode('replace')">Replace all combos</button>
+                <button class="modalbtn" onclick="resolveLoadMode('add')">Add combos</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="compareModal" class="modal">
+        <div class="modal-content compare-modal-content">
+            <h3>Compare profiles</h3>
+            <p>Compares the currently loaded profile against another .binarypb file or Magisk module .zip. Combos are matched by their band composition, ignoring band order.</p>
+            <input type="file" id="compareFileInput" accept=".binarypb,.zip">
+            <div id="compareResults"></div>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" onclick="closeCompareModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for help -->
     <div id="helpModal" class="modal">
         <div class="modal-content help-modal-content">
             <h3>Help</h3>
             <p class="help-more">For more detailed instructions, visit the <a href="https://github.com/jchin14/binarypb-band-editor#readme" target="_blank" rel="noopener">GitHub README</a>.</p>
+            <p class="help-disclaimer"><b>Disclaimer:</b> the stock Wildcard, Telstra, Optus, and VHA template profiles were pulled from an Australian Pixel 7 Pro in August 2026. They may not match your device, carrier, or region, and may be outdated. Use them at your own risk — they may cause instability with calling or data. Test thoroughly before relying on a patched phone in an emergency.</p>
+            <p class="help-disclaimer"><b>Note:</b> this editor has only been tested on desktop browsers. Mobile is not recommended.</p>
             <div class="help-section">
                 <h4>Top bar</h4>
                 <ul>
-                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
-                    <li><b>Filter box</b> — show only combos matching a band string, e.g. <code>1+3+7C+n78</code>.</li>
-                    <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
+                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically — if the zip contains more than one .binarypb (a multi-carrier bundle), you'll be asked which one to open. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry, and combos whose band composition already exists are skipped) or replace the current profile completely.</li>
+                    <li><b>+ New profile</b> — start with a completely empty profile so you can build combos from scratch, without loading a file first.</li>
+                    <li><b>⇄ Compare</b> — compares the currently loaded profile against another .binarypb or Magisk zip you pick, matching combos by band composition (order-independent) and listing which combos are only in one profile or the other.</li>
+                    <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above). If a profile is already loaded, you'll be asked whether to add the template's combos in or replace the current profile, same as picking a file.</li>
+                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. Matches are always exact — a combo must consist of exactly the named bands, with no unmentioned extras — unless you use one of these: a trailing <code>*</code> directly on a term means "contains", allowing any other bands too: <code>n78*</code> matches n78 alone or with anything else (shorthand for <code>n78|n78+</code>). A standalone <code>*</code> term is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit): <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
+                    <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
-                    <li><b>Pagination / Per page</b> — move between pages of combos and control how many are shown at once.</li>
+                    <li><b>4G / 5G</b> — filter combos by network type (this format only ever encodes LTE and NR, so no 2G/3G option exists).</li>
+                    <li><b>« Prev / Next »</b> — jump straight to the first or last page, or step one page at a time. <b>Per page</b> controls how many combos are shown at once (including an "all rows" option for large profiles).</li>
                     <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
-                    <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb.</li>
-                    <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone.</li>
+                    <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb. Asks whether the target phone is a Pixel 7/8 first, and sets the BM 65k patch accordingly before downloading.</li>
+                    <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone. Asks the same Pixel 7/8 question first.</li>
+                    <li><b>Also override WILDCARD</b> — when checked, the generated zip also overlays the same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads.</li>
                     <li><b>Clear session</b> — wipes the locally stored session and reloads the page.</li>
                     <li><b>View on GitHub</b> — opens the project's source code repository.</li>
                 </ul>
@@ -751,7 +1033,7 @@
                     <li><b>Integrity field + Save/Restore</b> — some binarypbs require an integrity value matching your phone's active file; Save/Restore store it in a cookie for next time.</li>
                     <li><b>FeatureSets: Add</b> — define custom downlink/uplink feature sets to reference from combos.</li>
                     <li><b>FeatureSets: JSON</b> — view/edit the raw feature set lists as JSON.</li>
-                    <li><b>Apply BM 65k patch</b> — patches the bitmask so all bands are allowed (Pixel 7/8; always 0 on Pixel 9).</li>
+                    <li><b>Apply BM 65k patch</b> — <b>required on Pixel 7/8</b> to enable all bands in the profile (patches every combo's bitmask to 65535). Not needed on Pixel 9, where this field is always 0.</li>
                     <li><b>Integrity ON/OFF</b> — toggles whether the integrity field is present in the file.</li>
                 </ul>
             </div>
@@ -766,9 +1048,10 @@
                     <li><b>bcsNr / bcsIntraENDC / bcsEutra</b> — per-group band combination set bitmasks.</li>
                     <li><b>powerClass</b> — 0 for default, 1 to force Power Class 2.</li>
                     <li><b>intraEndc</b> — intra-band EN-DC support flag for the group.</li>
-                    <li><b>Band input, ↑ ↓ - +</b> — edit a component carrier's band, reorder, remove, or add another band to the combo.</li>
+                    <li><b>Band input, ↑ ↓ - +</b> — edit a component carrier's band, reorder, remove, or add another band to the combo. The letter after the band number (e.g. n78<b>A</b>) is its bandwidth class — a per-band index (A=1, B=2, C=3, ...) defined by the 3GPP spec, not a universal size. A band with no letter has no class set at all (<code>bwClassDL</code> = 0) — real stock profiles always have a letter here, so leaving it blank isn't the same as "A" and likely won't work correctly on the phone.</li>
+                    <li><b>BW / F# columns</b> — read-only indicators next to the band input. <b>BW</b> shows <code>bwClassDL/bwClassUL</code> (the downlink/uplink bandwidth class numbers behind the letter). <b>F#</b> shows <code>dlFeatureIndex/ulFeatureIndex</code> (which entry in the DL/UL feature-set list this carrier uses).</li>
                     <li><b>DL / UL feature dropdowns, - +</b> — assign or remove feature sets (MIMO/bandwidth class) per carrier direction.</li>
-                    <li><b>Checkbox (per row)</b> — selects this combo for the bulk actions above.</li>
+                    <li><b>Checkbox (per row)</b> — selects this combo for the bulk actions above. <b>Bulk edit:</b> with more than one combo selected, editing a band, feature dropdown, or bcsNr/powerClass/etc. field on any one of them replays that same edit on every other selected combo (band add/remove/move/value changes included; per-CC edits apply by position, skipped where a selected combo doesn't have that many bands).</li>
                     <li><b>JSON / Copy / Remove (per row)</b> — edit this combo as raw JSON, duplicate it, or delete it.</li>
                 </ul>
             </div>
@@ -863,11 +1146,26 @@
         window.onmousedown = function(event) {
             const jsonModal = document.getElementById('jsonModal');
             const customFeatureModal = document.getElementById('customFeatureModal');
-    
+            const helpModal = document.getElementById('helpModal');
+            const compareModal = document.getElementById('compareModal');
+            const loadModeModal = document.getElementById('loadModeModal');
+            const zipEntryModal = document.getElementById('zipEntryModal');
+            const bmPatchModal = document.getElementById('bmPatchModal');
+
             if (event.target === jsonModal) {
                 closeModal();
             } else if (event.target === customFeatureModal) {
                 closeCustomFeatureModal();
+            } else if (event.target === helpModal) {
+                closeHelpModal();
+            } else if (event.target === compareModal) {
+                closeCompareModal();
+            } else if (event.target === loadModeModal) {
+                closeLoadModeModal();
+            } else if (event.target === zipEntryModal) {
+                document.getElementById('zipEntryCancelBtn')?.click();
+            } else if (event.target === bmPatchModal) {
+                document.getElementById('bmPatchNoBtn')?.click();
             }
         };
         // Close json modal on esc
@@ -875,6 +1173,14 @@
             if (event.key === "Escape") {
                 closeModal();
                 closeCustomFeatureModal();
+                closeCompareModal();
+                closeLoadModeModal();
+                if (document.getElementById('zipEntryModal').style.display === 'block') {
+                    document.getElementById('zipEntryCancelBtn')?.click();
+                }
+                if (document.getElementById('bmPatchModal').style.display === 'block') {
+                    document.getElementById('bmPatchNoBtn')?.click();
+                }
             }
         });
 
@@ -962,7 +1268,7 @@
                 });
             });
 
-            copies.reverse().forEach(copy => {
+            copies.forEach(copy => {
                 copy.combo.cc.forEach(ccItem => {
                     if (ccItem.dlFeaturePerCCIds && typeof ccItem.dlFeaturePerCCIds === 'object') {
                         ccItem.dlFeaturePerCCIds = new Uint8Array(Object.values(ccItem.dlFeaturePerCCIds));
@@ -971,10 +1277,13 @@
                         ccItem.ulFeaturePerCCIds = new Uint8Array(Object.values(ccItem.ulFeaturePerCCIds));
                     }
                 });
-                decodedData.ComboGroups.unshift({ comboHeader: copy.comboHeader, combo: [copy.combo] });
+                // Append after the originals (not prepend), so copying
+                // combos 1-20 leaves them at 1-20 with the copies at 21-40.
+                decodedData.ComboGroups.push({ comboHeader: copy.comboHeader, combo: [copy.combo] });
             });
 
-            selectedCombos.clear();
+            // Keep the original combos selected (not the new copies) so
+            // repeated copy/edit workflows don't lose the selection.
             generateTable(decodedData);
         }
 
@@ -1123,33 +1432,29 @@
             generateTable(decodedData);
         }
 
-        // Function to update band number
-        function updateBand(realGroupIndex, localComboIndex, ccIndex, newValue) {
-            let oldBand = decodedData.ComboGroups[realGroupIndex].combo[localComboIndex].cc[ccIndex].band;
+        function applyBandValueToCc(ccItem, newValue) {
+            let oldBand = ccItem.band;
             let newBandData = bandParseStr(newValue);
             let newBand = newBandData.band;
             let count = newBandData.bwClassDL;
-    
+
             // Determine if this is a band type change (NR <-> LTE)
             let oldIsNR = oldBand > 10000;
             let newIsNR = newBand > 10000;
             let bandTypeChanged = oldIsNR !== newIsNR;
-    
-            console.log(`Updated band:${newBand} cc:${count}, type changed: ${bandTypeChanged}`);
-    
-            let ccItem = decodedData.ComboGroups[realGroupIndex].combo[localComboIndex].cc[ccIndex];
+
             ccItem.band = Number(newBand);
             ccItem.bwClassDL = count;
-    
+
             // If band type changed, reset all feature-related values
             if (bandTypeChanged) {
                 delete ccItem.dlFeaturePerCCIds;
                 delete ccItem.ulFeaturePerCCIds;
-        
+
                 ccItem.dlFeatureIndex = 0;
                 ccItem.ulFeatureIndex = 0;
                 ccItem.bwClassUL = 0;
-        
+
                 // Initialize appropriate feature arrays for the new band type
                 if (newIsNR) {
                     ccItem.dlFeaturePerCCIds = new Uint8Array(0);
@@ -1158,10 +1463,18 @@
                     // For LTE bands, remove the Uint8Array properties entirely
                     // They will be recreated when features are added
                 }
-        
-                console.log(`Band type changed from ${oldIsNR ? 'NR' : 'LTE'} to ${newIsNR ? 'NR' : 'LTE'}, features reset`);
             }
-    
+        }
+
+        // Function to update band number
+        function updateBand(realGroupIndex, localComboIndex, ccIndex, newValue) {
+            const originCombo = decodedData.ComboGroups[realGroupIndex].combo[localComboIndex];
+            applyBandValueToCc(originCombo.cc[ccIndex], newValue);
+
+            getOtherSelectedCombos(originCombo).forEach(combo => {
+                if (ccIndex < combo.cc.length) applyBandValueToCc(combo.cc[ccIndex], newValue);
+            });
+
             generateTable(decodedData);
         }
 
@@ -1169,10 +1482,51 @@
         let currentPage = 1;
         let rowsPerPage = 20;
         let bandFilter = "";
-        let exactComboFilter = false;
+        let ulOnlyFilter = false;
+        let alsoOverrideWildcard = false;
+        let ratFilter = { '4G': true, '5G': true };
+
+        // This format only ever encodes LTE (4G) and NR (5G) bands.
+        function bandRat(band) {
+            return band > 10000 ? '5G' : '4G';
+        }
+
+        function comboMatchesRatFilter(combo) {
+            return combo.cc.every(ccItem => ratFilter[bandRat(ccItem.band)]);
+        }
+
+        function applyRatFilter(comboGroups) {
+            if (ratFilter['4G'] && ratFilter['5G']) return comboGroups;
+            return comboGroups.filter(group => group.combo.some(combo => comboMatchesRatFilter(combo)));
+        }
         let filteredGroups = [];
         let globalIndexMap = []; // Stores correct indices after filtering & pagination
         const selectedCombos = new Set();
+
+        // Bulk edit: when multiple combos are selected and one of them is
+        // edited, the same edit is replayed on every other selected combo.
+        function getOtherSelectedCombos(originCombo) {
+            if (!selectedCombos.has(originCombo) || selectedCombos.size <= 1) return [];
+            return [...selectedCombos].filter(combo => combo !== originCombo);
+        }
+
+        function findGroupForCombo(combo) {
+            return decodedData.ComboGroups.find(group => group.combo.includes(combo));
+        }
+
+        // Group-header fields (bcsNr, powerClass, etc.) belong to the
+        // ComboGroup, not the combo, so propagation is by owning group.
+        function getOtherSelectedGroups(originGroup) {
+            const originSelected = originGroup.combo.some(combo => selectedCombos.has(combo));
+            if (!originSelected || selectedCombos.size <= 1) return [];
+
+            const otherGroups = new Set();
+            selectedCombos.forEach(combo => {
+                const group = findGroupForCombo(combo);
+                if (group && group !== originGroup) otherGroups.add(group);
+            });
+            return [...otherGroups];
+        }
 
         function currentFilteredCombos() {
             return filteredGroups.flatMap(group => group.combo);
@@ -1205,7 +1559,7 @@
         }
 
         function generateTable(decodedData) {
-            filteredGroups = applyBandFilter(decodedData.ComboGroups);
+            filteredGroups = applyRatFilter(applyBandFilter(decodedData.ComboGroups));
             let totalRows = filteredGroups.length;
             let totalPages = rowsPerPage === Infinity ? 1 : Math.ceil(totalRows / rowsPerPage);
             const visibleCombos = currentFilteredCombos();
@@ -1224,13 +1578,18 @@
                     <button title="Edit available FeatureSets" id="editFeatureSetsBtn" onclick="editFeatureSets(1)">JSON</button>
                     </span>
                 <span id="infoPatches">Patches:
-                    <button title="65k patch is useful on Pixel 7/8 series for allowing all bands. On Pixel 9 series this is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
-                    <button title="Integrity field is present on some .binarypbs, it has to match the same value as your currently active binarypb on your phone." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
+                    <span class="patches-grid">
+                        <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch ${bitMaskToggled ? "ON" : "OFF"}</button>
+                        <span class="patch-hint patch-hint-required">⚠ Required on Pixel 7/8</span>
+                        <button title="Auto-set from your imported file — don't touch unless you know what you're doing. If present, it must match the value your phone's currently active binarypb has." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
+                        <span class="patch-hint patch-hint-caution">⚠ Integrity is auto-set from your file, don't touch unless you know what you're doing</span>
+                    </span>
                     </span>
                 </div></div>
+            ${selectedCombos.size > 1 ? `<div class="bulk-edit-banner">Bulk Editing ${selectedCombos.size} Combos</div>` : ''}
             <table class="main-table" style="border-collapse: collapse;">
                 <tr>
-                    <th><button title="Add a new combo" onclick="addNewComboToFirstGroup()">Add combo</button> Filtered Combos: ${countCombos(filteredGroups)}/${countCombos(decodedData.ComboGroups)}</th>
+                    <th><button title="Add a new combo" onclick="addNewComboToFirstGroup()">+ Add Combo</button> Filtered Combos: ${countCombos(filteredGroups)}/${countCombos(decodedData.ComboGroups)}</th>
                     <th>
                         <label title="Select every combo in the current filtered result"><input type="checkbox" ${allVisibleSelected ? "checked" : ""} onchange="toggleSelectAllFiltered(this.checked)"> Select all filtered</label><br>
                         <button title="Copy every selected combo" onclick="copySelectedCombos()">Copy selected (${selectedCombos.size})</button>
@@ -1240,6 +1599,27 @@
                         <button title="Remove every combo except the selected ones" class="btn-rem" onclick="removeAllExceptSelected()">Remove all except selected</button>
                     </th>
                 </tr>`;
+
+            if (totalRows > 0) {
+                tableHTML += `<tr class="combo-col-titles-row">
+                    <td>
+                        <div class="row-color-legend">
+                            <span class="legend-item"><span class="legend-swatch ran-lte"></span> LTE (4G)</span>
+                            <span class="legend-item"><span class="legend-swatch ran-nr"></span> NR sub-6 (5G)</span>
+                            <span class="legend-item"><span class="legend-swatch ran-mmwave"></span> NR mmWave (5G)</span>
+                            <span class="legend-item"><span class="legend-swatch color-row"></span> Has UL feature</span>
+                        </div>
+                        <div class="combo-col-titles-bar">
+                            <span class="title-col title-col-band">Band</span>
+                            <span class="title-col title-col-bw">BW</span>
+                            <span class="title-col title-col-feat">F#</span>
+                            <span class="title-col title-col-dl">Download (DL)</span>
+                            <span class="title-col title-col-ul">Upload (UL)</span>
+                        </div>
+                    </td>
+                    <td></td>
+                </tr>`;
+            }
 
             if (currentPage > totalPages) {
                 currentPage = 1;
@@ -1251,15 +1631,13 @@
             globalIndexMap = filteredGroups.map(group => decodedData.ComboGroups.indexOf(group)); // Map to real indices
 
             let comboCounter = start;
-            let titlesRendered = false;
 
             paginatedGroups.forEach((group, localGroupIndex) => {
                 let realGroupIndex = globalIndexMap[start + localGroupIndex]; // Map local to real index
 
                 group.combo.forEach((combo, localComboIndex) => {
                     comboCounter++;
-                    let innerTableHTML = `<div class="combo-number">#${comboCounter}</div>
-                        <div class="groupheader">
+                    let innerTableHTML = `<div class="groupheader">
                             <span>bcsNr:</span>
                             <input type="text" name="bcsNr" value="${parseBcs(group.comboHeader.bcsNr)}" oninput="updateBcs(${realGroupIndex},this.value,'bcsNr')">
                             <span>bcsIntraENDC:</span>
@@ -1274,35 +1652,27 @@
                             <span>intraEndc:</span>
                             <input type="text" name="intraBandEnDcSupport" value="${group.comboHeader.intraBandEnDcSupport}" oninput="updateComboHeader(${realGroupIndex},this.value,'intraBandEnDcSupport')">
                         </div>
+                        <div class="combo-table-wrapper">
+                        <div class="combo-number">#${comboCounter}</div>
                         <table class="combo-table" style="border-collapse: collapse;">`;
-
-                    if (!titlesRendered) {
-                        titlesRendered = true;
-                        innerTableHTML += `<tr class="combo-col-titles">
-                            <th class="combo-col-band">Band</th>
-                            <th class="bandextraind combo-col-bw">BW</th>
-                            <th class="bandextraind combo-col-feat">F#</th>
-                            <th class="combodirind"></th>
-                            <th class="combo-col-dl">Download (DL)</th>
-                            <th class="combodirind"></th>
-                            <th class="combo-col-ul">Upload (UL)</th>
-                        </tr>`;
-                    }
 
                     combo.cc.forEach((ccItem, ccIndex) => {
                         let hasUlFeature = ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0;
 
                         // 0 is NR, 1 is LTE (Later on LTE DL = 1, LTE UL = 2)
                         let ran = (ccItem.band > 10000) ? 0 : 1;
-                        let rowClass = (ran === 0 ? "ran-nr" : "ran-lte") + (hasUlFeature ? " color-row" : ""); // Tint by RAN type, highlight if ulFeaturePerCCIds exists
+                        let isMmwave = ran === 0 && (ccItem.band - 10000) > 250; // anything above n250 is FR2/mmWave
+                        let rowClass = (isMmwave ? "ran-mmwave" : (ran === 0 ? "ran-nr" : "ran-lte")) + (hasUlFeature ? " color-row" : ""); // Tint by RAN type, highlight if ulFeaturePerCCIds exists
 
                         let bandInput = `<span class="cc-index">${ccIndex + 1}</span><input name="band-input" type="text" class="band-input" value="${bandParseInt(ccItem.bwClassDL,ccItem.band)}"
                             onchange="updateBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, this.value)" />`;
 
-                        // Show "+" button only for the last band input
-                        let addBandBtn = ccIndex === combo.cc.length - 1
-                            ? `<button onclick="addBand(${realGroupIndex}, ${localComboIndex})">+</button>`
-                            : "";
+                        // Always render the "+" button (kept invisible except on the
+                        // last band input) so every row has the same content shape -
+                        // otherwise rows with vs without it get different auto-layout
+                        // column widths across separate combo tables, breaking
+                        // alignment with the header and with each other.
+                        let addBandBtn = `<button onclick="addBand(${realGroupIndex}, ${localComboIndex})" style="${ccIndex === combo.cc.length - 1 ? "" : "visibility:hidden"}">+</button>`;
 
                         let moveBandUpBtn = `<button title="Move band up" onclick="moveBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, -1)" ${ccIndex === 0 ? "disabled" : ""}>↑</button>`;
                         let moveBandDownBtn = `<button title="Move band down" onclick="moveBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, 1)" ${ccIndex === combo.cc.length - 1 ? "disabled" : ""}>↓</button>`;
@@ -1388,21 +1758,19 @@
                             <td class="combo-col-band">${bandInput} ${moveBandUpBtn} ${moveBandDownBtn} ${removeBandBtn} ${addBandBtn}</td>
                             <td class="bandextraind combo-col-bw">${ccItem.bwClassDL}/${ccItem.bwClassUL}</td>
                             <td class="bandextraind combo-col-feat">${ccItem.dlFeatureIndex}/${ccItem.ulFeatureIndex}</td>
-                            <td class="combodirind"><span class="groupheader">DL</span></td>
                             <td class="combo-col-dl"><div class="cc-feature-cell">${dlFeaturePerCCIdsHTML}</div></td>
-                            <td class="combodirind"><span class="groupheader">UL</span></td>
                             <td class="combo-col-ul"><div class="cc-feature-cell">${ulFeaturePerCCIdsHTML}</div></td>
                         </tr>`;
                     });
 
-                    innerTableHTML += '</table>';
+                    innerTableHTML += '</table></div>';
 
                     tableHTML += `<tr class="combo-row">
                         <td>${innerTableHTML}</td>
                         <td class="buttons">
                             <input class="combo-select" type="checkbox" title="Select this combo" ${selectedCombos.has(combo) ? "checked" : ""} onchange="toggleComboSelection(${realGroupIndex}, ${localComboIndex}, this.checked)">
-                            <button title="Edit this combo in json" class="btn-json"onclick="showJSON(${realGroupIndex}, ${localComboIndex})">JSON</button>
                             <button title="Copy this combo" class="btn-copy" onclick="copyCombo(${realGroupIndex}, ${localComboIndex})">Copy</button>
+                            <button title="Edit this combo in json" class="btn-json"onclick="showJSON(${realGroupIndex}, ${localComboIndex})">JSON</button>
                             <button title="Remove this combo" class="btn-rem" onclick="removeCombo(${realGroupIndex}, ${localComboIndex})">Remove</button>
                         </td>
                     </tr>`;
@@ -1412,10 +1780,73 @@
             updatePaginationControls(totalPages);
             tableHTML += `</table>`;
             document.getElementById("tableContainer").innerHTML = tableHTML;
+            document.getElementById("loadedControlsBar").style.display = "flex";
             document.getElementById("recompileBtn").style.display = "block";
             document.getElementById("bandFilter").style.display = "block";
+            document.getElementById("ratFilterGroup").style.display = "flex";
             document.getElementById("pageSizeSelector").style.display = "block";
+            syncLoadedControlsBarOffset();
+            syncMobileFixedBarPadding();
+            syncColumnTitleWidths();
         }
+
+        // Keeps the second (loaded-profile) sticky bar pinned directly below the
+        // main header, whose height varies with viewport width/wrapping.
+        function syncLoadedControlsBarOffset() {
+            const mainHeader = document.getElementById("mainHeader");
+            const loadedBar = document.getElementById("loadedControlsBar");
+            if (mainHeader && loadedBar) {
+                loadedBar.style.top = mainHeader.offsetHeight + "px";
+            }
+        }
+        window.addEventListener("resize", syncLoadedControlsBarOffset);
+
+        // The Band/BW/F#/DL/UL title bar lives outside the combo table (so it
+        // isn't nested inside the first combo's own card), so it has no
+        // built-in way to line up with that table's actual column widths.
+        // Measure the first real data row's cells and copy their rendered
+        // widths onto the title bar's columns.
+        function syncColumnTitleWidths() {
+            const titleBar = document.querySelector(".combo-col-titles-bar");
+            const firstDataRow = document.querySelector(".combo-table tr");
+            if (!titleBar || !firstDataRow) return;
+
+            const cells = firstDataRow.querySelectorAll("td");
+            const mapping = [
+                [".title-col-band", 0],
+                [".title-col-bw", 1],
+                [".title-col-feat", 2],
+                [".title-col-dl", 3],
+                [".title-col-ul", 4],
+            ];
+            mapping.forEach(([selector, index]) => {
+                const titleEl = titleBar.querySelector(selector);
+                const dataCell = cells[index];
+                if (titleEl && dataCell) {
+                    titleEl.style.width = dataCell.getBoundingClientRect().width + "px";
+                }
+            });
+        }
+        window.addEventListener("resize", syncColumnTitleWidths);
+
+        // On mobile, #bandFilter and #pagination are docked as separate
+        // fixed bars at the bottom of the screen, overlapping table content
+        // beneath them. Reserve enough bottom padding to clear whichever is
+        // taller, since their height grows as filter controls are added.
+        function syncMobileFixedBarPadding() {
+            const bandFilterEl = document.getElementById("bandFilter");
+            const paginationEl = document.getElementById("pagination");
+            const tableContainer = document.getElementById("tableContainer");
+            if (!bandFilterEl || !paginationEl || !tableContainer) return;
+
+            if (getComputedStyle(bandFilterEl).position !== "fixed") {
+                tableContainer.style.paddingBottom = "";
+                return;
+            }
+            const barHeight = Math.max(bandFilterEl.offsetHeight, paginationEl.offsetHeight);
+            tableContainer.style.paddingBottom = (barHeight + 16) + "px";
+        }
+        window.addEventListener("resize", syncMobileFixedBarPadding);
 
         function parseBcs(value) {
             if ((value >>> 0) === 0xFFFFFFFF) {
@@ -1437,29 +1868,35 @@
         }
 
         function updateBcs(realGroupIndex, indexes, type, length = 32) {
+            let value;
+
             // If indexes is a string, convert it to an array of numbers
             if (typeof indexes === "string") {
                 if (indexes.trim().toLowerCase() === "all") {
-                    decodedData.ComboGroups[realGroupIndex].comboHeader[type] = 0xFFFFFFFF;
-                    return;
+                    value = 0xFFFFFFFF;
+                } else {
+                    indexes = indexes.split(",").map(num => parseInt(num.trim(), 10));
                 }
-
-                indexes = indexes.split(",").map(num => parseInt(num.trim(), 10));
             }
 
-            if (!Array.isArray(indexes)) {
-                console.error("Expected an array or a comma-separated string, received:", indexes);
-                return null;
+            if (value === undefined) {
+                if (!Array.isArray(indexes)) {
+                    console.error("Expected an array or a comma-separated string, received:", indexes);
+                    return null;
+                }
+
+                let binaryArray = new Array(length).fill("0");
+                indexes.forEach(index => {
+                    if (!isNaN(index) && index < length) {
+                        binaryArray[index] = "1";
+                    }
+                });
+                value = parseInt(binaryArray.join(""), 2);
             }
 
-            let binaryArray = new Array(length).fill("0");
-            indexes.forEach(index => {
-                if (!isNaN(index) && index < length) {
-                    binaryArray[index] = "1";
-                }
-            });
-            let value = parseInt(binaryArray.join(""), 2);
-            decodedData.ComboGroups[realGroupIndex].comboHeader[type] = value;
+            const originGroup = decodedData.ComboGroups[realGroupIndex];
+            originGroup.comboHeader[type] = value;
+            getOtherSelectedGroups(originGroup).forEach(group => { group.comboHeader[type] = value; });
         }
 
         function updateComboHeader(realGroupIndex, value, field) {
@@ -1467,8 +1904,9 @@
             if (isNaN(numValue)) {
                 numValue = 0;
             }
-            decodedData.ComboGroups[realGroupIndex].comboHeader[field] = numValue;
-            console.log(`Updated ${field} to ${numValue} for group ${realGroupIndex}`);
+            const originGroup = decodedData.ComboGroups[realGroupIndex];
+            originGroup.comboHeader[field] = numValue;
+            getOtherSelectedGroups(originGroup).forEach(group => { group.comboHeader[field] = numValue; });
         }
 
         const lteClassBBands = new Set([3, 5, 7, 8, 12, 27, 48, 66]);
@@ -1588,40 +2026,57 @@
             console.log("New combo added to group 0");
         }
 
-        function addBand(groupIndex, comboIndex) {
-            let newBand = {
+        function newDefaultBand() {
+            return {
                 band: 10078,
                 bwClassDL: 0,
                 bwClassUL: 0,
                 dlFeatureIndex: 0,
                 ulFeatureIndex: 0,
             };
+        }
 
-            decodedData.ComboGroups[groupIndex].combo[comboIndex].cc.push(newBand);
-            //console.log("After Adding Band:", JSON.stringify(decodedData, null, 2));
+        function addBand(groupIndex, comboIndex) {
+            const originCombo = decodedData.ComboGroups[groupIndex].combo[comboIndex];
+            originCombo.cc.push(newDefaultBand());
+
+            getOtherSelectedCombos(originCombo).forEach(combo => combo.cc.push(newDefaultBand()));
 
             generateTable(decodedData);
         }
 
         function moveBand(groupIndex, comboIndex, ccIndex, direction) {
-            const cc = decodedData.ComboGroups[groupIndex].combo[comboIndex].cc;
+            const originCombo = decodedData.ComboGroups[groupIndex].combo[comboIndex];
+            const cc = originCombo.cc;
             const targetIndex = ccIndex + direction;
 
             if (targetIndex < 0 || targetIndex >= cc.length) return;
-
             [cc[ccIndex], cc[targetIndex]] = [cc[targetIndex], cc[ccIndex]];
+
+            getOtherSelectedCombos(originCombo).forEach(combo => {
+                const otherTarget = ccIndex + direction;
+                if (otherTarget >= 0 && otherTarget < combo.cc.length) {
+                    [combo.cc[ccIndex], combo.cc[otherTarget]] = [combo.cc[otherTarget], combo.cc[ccIndex]];
+                }
+            });
+
             generateTable(decodedData);
         }
 
         function removeBand(realGroupIndex, localComboIndex, ccIndex) {
-            let combo = decodedData.ComboGroups[realGroupIndex].combo[localComboIndex];
+            const originCombo = decodedData.ComboGroups[realGroupIndex].combo[localComboIndex];
 
-            if (combo.cc.length > 1) {
-                combo.cc.splice(ccIndex, 1);
+            if (originCombo.cc.length > 1) {
+                originCombo.cc.splice(ccIndex, 1);
             } else {
                 alert("At least one band must be present in the combo.");
+                return;
             }
-            console.log(`cc at index ${ccIndex} in group ${realGroupIndex} removed.`);
+
+            getOtherSelectedCombos(originCombo).forEach(combo => {
+                if (combo.cc.length > 1 && ccIndex < combo.cc.length) combo.cc.splice(ccIndex, 1);
+            });
+
             generateTable(decodedData); // Refresh table
         }
 
@@ -1631,51 +2086,125 @@
         });
 
         function applyBandFilter(comboGroups) {
-            if (!bandFilter) return comboGroups; // No filter applied
-
-            // Trim any space and trailing "+" to avoid issues
-            bandFilter = bandFilter.replace(/\s+/g, "").replace(/\+$/, "");
-
-            // Parse filter bands and extract both band and optional bwClassDL
-            let filterBands = bandFilter.split("+").map(band => bandParseStr(band)); // Convert "n78C" or similar
-
-            // If no valid filter bands, return the full set of combos
-            if (filterBands.length === 0) return comboGroups;
+            const expr = bandFilter.replace(/\s+/g, "");
+            if (!expr) return comboGroups; // No filter applied
 
             return comboGroups.filter(group =>
-                group.combo.some(combo => comboMatchesBandFilter(combo, filterBands))
+                group.combo.some(combo => comboMatchesFilterExpression(combo, expr))
             );
         }
 
-        // Each filter term must match a different component carrier. This makes
-        // n78+n78 mean two n78 carriers, rather than matching one n78 twice.
-        function comboMatchesBandFilter(combo, filterBands) {
+        // Filter syntax: "+" = AND, "|" = OR, "!" prefix = NOT, "^" = XOR
+        // (exactly one side must match), e.g. "1+3+7C | !n78 | n78^n41".
+        function comboMatchesFilterExpression(combo, expr) {
+            if (expr.includes("^")) {
+                const parts = expr.split("^").filter(Boolean);
+                const matchCount = parts.filter(part => comboMatchesFilterExpression(combo, part)).length;
+                return matchCount === 1;
+            }
+
+            const orGroups = expr.split("|").filter(Boolean);
+            return orGroups.some(group => comboMatchesAndGroup(combo, group));
+        }
+
+        // Each positive term must match a different component carrier. This
+        // makes n78+n78 mean two n78 carriers, not one n78 matched twice.
+        //
+        // "*" is a wildcard term meaning "one other unspecified component
+        // carrier": "n78+*" matches combos with n78 and exactly one other
+        // CC; "n78+*+*" matches n78 plus exactly two other CCs. This forces
+        // the combo's total CC count to equal the number of named terms
+        // plus the number of "*" wildcards. When "Search UL only" is on,
+        // wildcard slots must also be filled by a CC that has UL features.
+        function comboMatchesAndGroup(combo, group) {
+            // A trailing "*" attached directly to a term (not after a "+",
+            // which is the wildcard-slot syntax below) means "contains" -
+            // the named terms must match, and any other bands are allowed
+            // (zero or more), unlike the default exact match. "n78*" is
+            // shorthand for "n78|n78+" - n78 alone or with anything else.
+            const containsMode = group === "*" || /[^+]\*$/.test(group);
+            if (containsMode) group = group.slice(0, -1);
+
+            // A trailing "+" (with nothing after it) means "and at least one
+            // more unspecified band" - open-ended, no upper bound. Combined
+            // with "*" wildcards it means "and at least N more": "n78+*+"
+            // is n78 plus at least two other bands (one guaranteed by "*",
+            // at least one more from the trailing "+").
+            const openEnded = !containsMode && group.endsWith("+");
+
+            const terms = group.split("+").filter(Boolean);
+            const positiveBands = [];
+            const negativeBands = [];
+            let wildcardCount = 0;
+            terms.forEach(term => {
+                if (term === "*") {
+                    wildcardCount++;
+                } else if (term.startsWith("!")) {
+                    negativeBands.push(bandParseStr(term.slice(1)));
+                } else {
+                    positiveBands.push(bandParseStr(term));
+                }
+            });
+
+            // When "Search UL only" is ticked, a term only matches a CC that
+            // actually has uplink feature IDs declared (i.e. is used for UL),
+            // not just present in the combo for downlink.
+            const ccMatchesBand = (ccItem, filterBand) =>
+                ccItem.band === filterBand.band &&
+                (filterBand.bwClassDL === 0 || ccItem.bwClassDL === filterBand.bwClassDL) &&
+                (!ulOnlyFilter || (ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0));
+
             const usedCcIndexes = new Set();
-            const orderedFilters = [...filterBands].sort((a, b) =>
+            const orderedPositive = [...positiveBands].sort((a, b) =>
                 Number(b.bwClassDL !== 0) - Number(a.bwClassDL !== 0)
             );
 
-            const allFiltersMatched = orderedFilters.every(filterBand => {
+            const allPositiveMatched = orderedPositive.every(filterBand => {
                 const ccIndex = combo.cc.findIndex((ccItem, index) =>
-                    !usedCcIndexes.has(index) &&
-                    ccItem.band === filterBand.band &&
-                    (filterBand.bwClassDL === 0 || ccItem.bwClassDL === filterBand.bwClassDL)
+                    !usedCcIndexes.has(index) && ccMatchesBand(ccItem, filterBand)
                 );
                 if (ccIndex === -1) return false;
                 usedCcIndexes.add(ccIndex);
                 return true;
             });
-            return allFiltersMatched && (!exactComboFilter || usedCcIndexes.size === combo.cc.length);
+            if (!allPositiveMatched) return false;
+
+            const anyNegativeMatched = negativeBands.some(filterBand =>
+                combo.cc.some(ccItem => ccMatchesBand(ccItem, filterBand))
+            );
+            if (anyNegativeMatched) return false;
+
+            // Contains mode: the named terms matched above, and any
+            // remaining CCs are unconstrained (zero or more allowed).
+            if (containsMode) return true;
+
+            if (wildcardCount > 0 || openEnded) {
+                // A CC only "counts" toward filling a wildcard/open-ended
+                // slot if it also satisfies the UL-only constraint when on -
+                // not just the named bands.
+                const qualifyingExtra = combo.cc.filter((ccItem, index) =>
+                    !usedCcIndexes.has(index) &&
+                    (!ulOnlyFilter || (ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0))
+                ).length;
+
+                if (openEnded) {
+                    return qualifyingExtra >= wildcardCount + 1;
+                }
+                const totalExtra = combo.cc.length - usedCcIndexes.size;
+                return totalExtra === wildcardCount && qualifyingExtra === wildcardCount;
+            }
+            // Always require an exact match: every CC in the combo must be
+            // accounted for by a named term (no unmentioned extra bands).
+            return usedCcIndexes.size === combo.cc.length;
         }
 
         function updatePaginationControls(totalPages) {
             let paginationHTML = `
-                <button onclick="changePage(-1000)" ${currentPage === 1 ? "disabled" : ""}>«</button>
+                <button title="First page" onclick="changePage(-Infinity)" ${currentPage === 1 ? "disabled" : ""}>«</button>
                 <button onclick="changePage(-1)" ${currentPage === 1 ? "disabled" : ""}>Prev</button>
                 <span>${currentPage}/${totalPages}</span>
                 <button onclick="changePage(1)" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
-                
-                
+                <button title="Last page" onclick="changePage(Infinity)" ${currentPage === totalPages ? "disabled" : ""}>»</button>
             `;
             document.getElementById("pagination").innerHTML = paginationHTML;
         }
@@ -1696,6 +2225,7 @@
 
             // NR
             if (ran === 0) {
+                optionsHTML += `<option value="0" disabled>Idx: SCS, MIMO, Max BW, Modulation, 90MHz support</option>`;
                 featureSetList.forEach((feature, index) => {
                 let selected = (index + 1 === selectedValue) ? "selected" : '';
 
@@ -1742,10 +2272,7 @@
             return optionsHTML;
         }
 
-        function updateFeatureId(groupIndex, comboIndex, ccIndex, featureType, newValue, ran) {
-            let featureObj = decodedData.ComboGroups[groupIndex].combo[comboIndex].cc[ccIndex];
-            newValue = parseInt(newValue, 10);
-
+        function applyFeatureIdToCc(featureObj, featureType, newValue, ran) {
             // NR
             if (ran === 0) {
                 // Split the feature type to get key if applicable
@@ -1762,20 +2289,27 @@
             } else if (ran > 0) {
                 // LTE DL
                 if (featureType === 0) {
-                    FeatureIndex = parseLteFeatureIndex( {mimo: newValue, count: featureObj.bwClassDL, ran: 1}).FeatureIndex;
-                    featureObj.dlFeatureIndex = FeatureIndex;
+                    featureObj.dlFeatureIndex = parseLteFeatureIndex({ mimo: newValue, count: featureObj.bwClassDL, ran: 1 }).FeatureIndex;
                 }
                 // LTE UL
                 if (featureType === 1) {
-                    FeatureIndex = parseLteFeatureIndex( {mimo: newValue, count: featureObj.bwClassUL, ran: 2}).FeatureIndex;
-                    featureObj.ulFeatureIndex = FeatureIndex;
+                    featureObj.ulFeatureIndex = parseLteFeatureIndex({ mimo: newValue, count: featureObj.bwClassUL, ran: 2 }).FeatureIndex;
                 }
             }
-           
+
             // Apply bwClassDL, bwClassUL, dlFeatureIndex, ulFeatureIndex logic
             updateDependentValues(featureObj, ran);
+        }
 
-            //console.log("Updated Feature Object:", featureObj);
+        function updateFeatureId(groupIndex, comboIndex, ccIndex, featureType, newValue, ran) {
+            const originCombo = decodedData.ComboGroups[groupIndex].combo[comboIndex];
+            newValue = parseInt(newValue, 10);
+            applyFeatureIdToCc(originCombo.cc[ccIndex], featureType, newValue, ran);
+
+            getOtherSelectedCombos(originCombo).forEach(combo => {
+                if (ccIndex < combo.cc.length) applyFeatureIdToCc(combo.cc[ccIndex], featureType, newValue, ran);
+            });
+
             generateTable(decodedData); // Refresh the table
         }
 
@@ -1920,15 +2454,10 @@
         }
 
         // Function to add a new index to dlFeaturePerCCIds or ulFeaturePerCCIds
-        function addFeaturePerCCId(groupIndex, comboIndex, ccIndex, featureType, ran) {
-            console.log(`Adding new key to ${featureType} in group ${groupIndex}, combo ${comboIndex}, cc ${ccIndex}`);
-
-            
-            let featureObj = decodedData.ComboGroups[groupIndex].combo[comboIndex].cc[ccIndex];
-
+        function applyAddFeaturePerCCId(featureObj, featureType, ran) {
             // Ensure correct type (convert object to Uint8Array if needed)
             if (!featureObj[featureType] || !(featureObj[featureType] instanceof Uint8Array)) {
-                featureObj[featureType] = new Uint8Array(0); 
+                featureObj[featureType] = new Uint8Array(0);
             }
 
             // Convert Uint8Array to array to modify
@@ -1941,7 +2470,7 @@
                 } else if (ran > 0) {
                     featureArray.push(0); // Insert '0' if the array is empty for lte
                 }
-                
+
             } else {
                 const lastValue = featureArray[featureArray.length - 1];
                 let nextValue = lastValue;
@@ -1966,17 +2495,20 @@
 
             // Recalculate all dependent values immediately
             updateDependentValues(featureObj, ran);
+        }
 
-            //console.log("Updated Feature Object:", featureObj);
+        function addFeaturePerCCId(groupIndex, comboIndex, ccIndex, featureType, ran) {
+            const originCombo = decodedData.ComboGroups[groupIndex].combo[comboIndex];
+            applyAddFeaturePerCCId(originCombo.cc[ccIndex], featureType, ran);
+
+            getOtherSelectedCombos(originCombo).forEach(combo => {
+                if (ccIndex < combo.cc.length) applyAddFeaturePerCCId(combo.cc[ccIndex], featureType, ran);
+            });
+
             generateTable(decodedData); // Refresh the table
         }
 
-        // Function to remove the last added featurePerCCId index
-        function removeFeaturePerCCId(groupIndex, comboIndex, ccIndex, featureType, ran) {
-            console.log(`Removing last key from ${featureType} in group ${groupIndex}, combo ${comboIndex}, cc ${ccIndex}`);
-
-            let featureObj = decodedData.ComboGroups[groupIndex].combo[comboIndex].cc[ccIndex];
-
+        function applyRemoveFeaturePerCCId(featureObj, featureType, ran) {
             if (!featureObj[featureType] || !(featureObj[featureType] instanceof Uint8Array)) return;
 
             // Convert Uint8Array to array
@@ -1995,8 +2527,17 @@
 
             // Recalculate all dependent values immediately
             updateDependentValues(featureObj, ran);
+        }
 
-            //console.log("Updated Feature Object:", featureObj);
+        // Function to remove the last added featurePerCCId index
+        function removeFeaturePerCCId(groupIndex, comboIndex, ccIndex, featureType, ran) {
+            const originCombo = decodedData.ComboGroups[groupIndex].combo[comboIndex];
+            applyRemoveFeaturePerCCId(originCombo.cc[ccIndex], featureType, ran);
+
+            getOtherSelectedCombos(originCombo).forEach(combo => {
+                if (ccIndex < combo.cc.length) applyRemoveFeaturePerCCId(combo.cc[ccIndex], featureType, ran);
+            });
+
             generateTable(decodedData); // Refresh the table
         }
 
@@ -2053,8 +2594,9 @@
         }
 
         let bitMaskToggled = false; // Track toggle state
-        function toggleBitMask() {
-            bitMaskToggled = !bitMaskToggled; // Toggle state
+
+        function setBitMask(applied) {
+            bitMaskToggled = applied;
 
             decodedData.ComboGroups.forEach(group => {
                 group.combo.forEach(combo => {
@@ -2068,11 +2610,36 @@
             setTimeout(() => {
                 let button = document.getElementById("bitMaskToggleBtn");
                 if (button) {
-                    button.textContent = bitMaskToggled ? "Apply BM 0 patch" : "Apply BM 65k patch";
+                    button.textContent = bitMaskToggled ? "Apply BM 65k patch ON" : "Apply BM 65k patch OFF";
                 }
             }, 10); // Small delay to ensure it updates properly
 
             console.log(`All bitMask values set to ${bitMaskToggled ? 65535 : 0}`);
+        }
+
+        function toggleBitMask() {
+            setBitMask(!bitMaskToggled);
+        }
+
+        // Asks which device this download is for and sets the BM 65k patch
+        // accordingly, so downloading always reflects the right device instead
+        // of relying on whatever the manual toggle happens to be set to.
+        function confirmBitMaskForDownload() {
+            if (!decodedData) return Promise.resolve();
+            return new Promise(resolve => {
+                const modal = document.getElementById('bmPatchModal');
+                document.getElementById('bmPatchYesBtn').onclick = () => {
+                    modal.style.display = 'none';
+                    setBitMask(true);
+                    resolve();
+                };
+                document.getElementById('bmPatchNoBtn').onclick = () => {
+                    modal.style.display = 'none';
+                    setBitMask(false);
+                    resolve();
+                };
+                modal.style.display = 'block';
+            });
         }
 
         let integrityToggled = false; // Track toggle state
@@ -2220,6 +2787,15 @@
             document.getElementById("helpModal").style.display = "block";
         }
 
+        function toggleHelpModal() {
+            const helpModal = document.getElementById("helpModal");
+            if (helpModal.style.display === "block") {
+                closeHelpModal();
+            } else {
+                showHelpModal();
+            }
+        }
+
         function closeHelpModal() {
             document.getElementById("helpModal").style.display = "none";
         }
@@ -2274,27 +2850,320 @@
         // File handling and recompile functions
         let decodedData;
         let originalFilename;
-        document.getElementById('fileInput').addEventListener('change', function(event) {
+
+        function loadBinaryPbBuffer(buffer, filename) {
+            originalFilename = filename.endsWith(".binarypb") ? filename.slice(0, -9) : filename;
+            document.getElementById("filenameInput").value = originalFilename || "default_filename";
+            try {
+                const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
+                decodedData = UeCaps.toObject(decodedMessage, { defaults: true });
+                processDecodedMessage(decodedData);
+                generateTable(decodedData);
+            } catch (error) {
+                document.getElementById('tableContainer').innerHTML = "Error decoding file: " + error.message;
+            }
+        }
+
+        // Shows the zip-entry picker modal and resolves with the chosen entry,
+        // or null if the user cancels.
+        function pickZipEntry(entries) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('zipEntryModal');
+                const list = document.getElementById('zipEntryList');
+                list.innerHTML = '';
+                entries.forEach(entry => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'modalbtn';
+                    btn.textContent = entry.name.split('/').pop();
+                    btn.onclick = () => {
+                        modal.style.display = 'none';
+                        resolve(entry);
+                    };
+                    list.appendChild(btn);
+                });
+                document.getElementById('zipEntryCancelBtn').onclick = () => {
+                    modal.style.display = 'none';
+                    resolve(null);
+                };
+                modal.style.display = 'block';
+            });
+        }
+
+        // Reads a .binarypb file, or pulls one out of a Magisk module .zip
+        // (prompting for which one if the zip carries more than one, e.g. a
+        // multi-carrier bundle).
+        async function extractBinaryPbBytes(file) {
+            if (file.name.toLowerCase().endsWith('.zip')) {
+                const zip = await JSZip.loadAsync(file);
+                const entries = Object.values(zip.files).filter(f =>
+                    !f.dir && f.name.toLowerCase().endsWith('.binarypb')
+                );
+                if (entries.length === 0) throw new Error("No .binarypb file found inside this zip.");
+                let entry = entries[0];
+                if (entries.length > 1) {
+                    entry = await pickZipEntry(entries);
+                    if (!entry) throw new Error("No file was chosen from the zip.");
+                }
+                const buffer = await entry.async('arraybuffer');
+                return { buffer, filename: entry.name.split('/').pop() };
+            }
+            const buffer = await file.arrayBuffer();
+            return { buffer, filename: file.name };
+        }
+
+        function startNewProfile() {
+            if (decodedData && countCombos(decodedData.ComboGroups) > 0) {
+                if (!confirm("Start a new empty profile? This replaces the profile currently loaded — unsaved changes will be lost.")) return;
+            }
+            originalFilename = "new_profile";
+            document.getElementById("filenameInput").value = originalFilename;
+            decodedData = {
+                version: 1,
+                id: 0,
+                ComboGroups: [],
+                dlFeaturePerCCList: [],
+                ulFeaturePerCCList: []
+            };
+            generateTable(decodedData);
+        }
+
+        // Merges another decoded profile's combos into the currently loaded one,
+        // remapping NR feature-set references (dlFeaturePerCCIds/ulFeaturePerCCIds)
+        // into the current profile's dlFeaturePerCCList/ulFeaturePerCCList so the
+        // indices still point at the right feature set after the merge.
+        function mergeProfileIntoDecodedData(otherData) {
+            processDecodedMessage(otherData);
+            const sourceDlFeatures = Array.isArray(otherData.dlFeaturePerCCList) ? otherData.dlFeaturePerCCList : null;
+            const sourceUlFeatures = Array.isArray(otherData.ulFeaturePerCCList) ? otherData.ulFeaturePerCCList : null;
+            decodedData.dlFeaturePerCCList ||= [];
+            decodedData.ulFeaturePerCCList ||= [];
+
+            // Skip any incoming combo whose band composition (order-independent)
+            // already exists, whether from the current profile or already added
+            // earlier in this same merge.
+            const existingSignatures = new Set();
+            decodedData.ComboGroups.forEach(group => group.combo.forEach(combo => existingSignatures.add(comboSignature(combo))));
+
+            let addedCount = 0;
+            let skippedCount = 0;
+
+            (otherData.ComboGroups || []).forEach(group => {
+                const combos = [];
+                group.combo.forEach(combo => {
+                    const sig = comboSignature(combo);
+                    if (existingSignatures.has(sig)) {
+                        skippedCount++;
+                        return;
+                    }
+                    existingSignatures.add(sig);
+
+                    const newCombo = JSON.parse(JSON.stringify(combo));
+                    newCombo.cc.forEach(ccItem => {
+                        if (ccItem.band > 10000) {
+                            ccItem.dlFeaturePerCCIds = mapImportedFeatureIds(ccItem.dlFeaturePerCCIds, sourceDlFeatures, decodedData.dlFeaturePerCCList);
+                            ccItem.ulFeaturePerCCIds = mapImportedFeatureIds(ccItem.ulFeaturePerCCIds, sourceUlFeatures, decodedData.ulFeaturePerCCList);
+                        } else {
+                            ccItem.dlFeaturePerCCIds = importFeatureIds(ccItem.dlFeaturePerCCIds);
+                            ccItem.ulFeaturePerCCIds = importFeatureIds(ccItem.ulFeaturePerCCIds);
+                        }
+                    });
+                    combos.push(newCombo);
+                    addedCount++;
+                });
+                if (combos.length > 0) {
+                    decodedData.ComboGroups.push({ comboHeader: JSON.parse(JSON.stringify(group.comboHeader)), combo: combos });
+                }
+            });
+
+            generateTable(decodedData);
+            alert(`Added ${addedCount} new combo${addedCount === 1 ? '' : 's'}.${skippedCount > 0 ? ` Skipped ${skippedCount} duplicate${skippedCount === 1 ? '' : 's'} already in the profile.` : ''}`);
+        }
+
+        // Set to an async function returning { buffer, filename } while the
+        // load-mode modal is open, so resolveLoadMode can pull bytes from
+        // whichever source (file picker or stock template) triggered it.
+        let pendingLoad = null;
+
+        function closeLoadModeModal() {
+            document.getElementById('loadModeModal').style.display = 'none';
+            pendingLoad = null;
+            document.getElementById('fileInput').value = '';
+        }
+
+        async function resolveLoadMode(mode) {
+            const getBufferAndFilename = pendingLoad;
+            document.getElementById('loadModeModal').style.display = 'none';
+            pendingLoad = null;
+            if (!getBufferAndFilename) return;
+            try {
+                const { buffer, filename } = await getBufferAndFilename();
+                if (mode === 'add') {
+                    const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
+                    const otherData = UeCaps.toObject(decodedMessage, { defaults: true });
+                    mergeProfileIntoDecodedData(otherData);
+                } else {
+                    loadBinaryPbBuffer(buffer, filename);
+                }
+            } catch (error) {
+                alert("Failed to load file: " + error.message);
+            } finally {
+                document.getElementById('fileInput').value = '';
+            }
+        }
+
+        document.getElementById('fileInput').addEventListener('change', async function(event) {
             const file = event.target.files[0];
             if (!file) return;
-            originalFilename = file.name.endsWith(".binarypb") ? file.name.slice(0, -9) : file.name;
-            
-            document.getElementById("filenameInput").value = originalFilename || "default_filename";
+            if (decodedData && countCombos(decodedData.ComboGroups) > 0) {
+                pendingLoad = () => extractBinaryPbBytes(file);
+                document.getElementById('loadModeModal').style.display = 'block';
+                return;
+            }
+            try {
+                const { buffer, filename } = await extractBinaryPbBytes(file);
+                loadBinaryPbBuffer(buffer, filename);
+            } catch (error) {
+                alert("Failed to load file: " + error.message);
+            } finally {
+                document.getElementById('fileInput').value = '';
+            }
+        });
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const buffer = new Uint8Array(e.target.result);
-                try {
-                    const decodedMessage = UeCaps.decode(buffer);
-                    decodedData = UeCaps.toObject(decodedMessage, { defaults: true });
-                    processDecodedMessage(decodedData);
-                    generateTable(decodedData);
-                } catch (error) {
-                    document.getElementById('tableContainer').innerHTML = "Error decoding file: " + error.message;
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        });        
+        function showCompareModal() {
+            if (!decodedData) {
+                alert("Load a profile first, then compare it against another one.");
+                return;
+            }
+            document.getElementById('compareResults').innerHTML = '';
+            document.getElementById('compareFileInput').value = '';
+            document.getElementById('compareModal').style.display = 'block';
+        }
+
+        function closeCompareModal() {
+            document.getElementById('compareModal').style.display = 'none';
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // A combo's "signature" is its sorted list of band+class strings, so
+        // combos with the same bands in a different order still match.
+        function comboSignature(combo) {
+            return combo.cc
+                .map(cc => bandParseInt(cc.bwClassDL, cc.band))
+                .sort()
+                .join('+');
+        }
+
+        function buildComboSignatureCounts(data) {
+            const counts = new Map();
+            data.ComboGroups.forEach(group => {
+                group.combo.forEach(combo => {
+                    const sig = comboSignature(combo);
+                    counts.set(sig, (counts.get(sig) || 0) + 1);
+                });
+            });
+            return counts;
+        }
+
+        function integrityLabel(data) {
+            return data.hasOwnProperty('unknown') ? data.unknown : 'OFF';
+        }
+
+        function runProfileComparison(otherData, otherFilename) {
+            const aName = originalFilename || "Current profile";
+            const bName = otherFilename.endsWith(".binarypb") ? otherFilename.slice(0, -9) : otherFilename;
+
+            const aCounts = buildComboSignatureCounts(decodedData);
+            const bCounts = buildComboSignatureCounts(otherData);
+
+            const onlyInA = [];
+            const onlyInB = [];
+            let common = 0;
+
+            new Set([...aCounts.keys(), ...bCounts.keys()]).forEach(sig => {
+                const aCount = aCounts.get(sig) || 0;
+                const bCount = bCounts.get(sig) || 0;
+                common += Math.min(aCount, bCount);
+                if (aCount > bCount) onlyInA.push({ sig, count: aCount - bCount });
+                else if (bCount > aCount) onlyInB.push({ sig, count: bCount - aCount });
+            });
+
+            onlyInA.sort((x, y) => x.sig.localeCompare(y.sig));
+            onlyInB.sort((x, y) => x.sig.localeCompare(y.sig));
+
+            renderComparisonResults({
+                aName, bName,
+                aId: decodedData.id, bId: otherData.id,
+                aVersion: decodedData.version, bVersion: otherData.version,
+                aIntegrity: integrityLabel(decodedData), bIntegrity: integrityLabel(otherData),
+                aTotal: countCombos(decodedData.ComboGroups), bTotal: countCombos(otherData.ComboGroups),
+                common, onlyInA, onlyInB
+            });
+        }
+
+        function renderComparisonResults(r) {
+            const renderList = items => items.length
+                ? `<ul class="compare-combo-list">${items.map(i =>
+                    `<li><code>${escapeHtml(i.sig)}</code>${i.count > 1 ? ` &times;${i.count}` : ''}</li>`
+                  ).join('')}</ul>`
+                : `<p><em>None</em></p>`;
+
+            document.getElementById('compareResults').innerHTML = `
+                <table class="compare-meta-table">
+                    <tr><th></th><th>${escapeHtml(r.aName)}</th><th>${escapeHtml(r.bName)}</th></tr>
+                    <tr><td>ID</td><td>${r.aId}</td><td>${r.bId}</td></tr>
+                    <tr><td>Version</td><td>${r.aVersion}</td><td>${r.bVersion}</td></tr>
+                    <tr><td>Integrity</td><td>${r.aIntegrity}</td><td>${r.bIntegrity}</td></tr>
+                    <tr><td>Total combos</td><td>${r.aTotal}</td><td>${r.bTotal}</td></tr>
+                </table>
+                <p><b>${r.common}</b> combo${r.common === 1 ? '' : 's'} match between both profiles (band composition, order-independent).</p>
+                <h4>Only in ${escapeHtml(r.aName)} (${r.onlyInA.reduce((s, i) => s + i.count, 0)})</h4>
+                ${renderList(r.onlyInA)}
+                <h4>Only in ${escapeHtml(r.bName)} (${r.onlyInB.reduce((s, i) => s + i.count, 0)})</h4>
+                ${renderList(r.onlyInB)}
+            `;
+        }
+
+        document.getElementById('compareFileInput').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('compareResults').innerHTML = '<p>Comparing...</p>';
+            try {
+                const { buffer, filename } = await extractBinaryPbBytes(file);
+                const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
+                const otherData = UeCaps.toObject(decodedMessage, { defaults: true });
+                runProfileComparison(otherData, filename);
+            } catch (error) {
+                document.getElementById('compareResults').innerHTML =
+                    `<p><em>Failed to load file: ${escapeHtml(error.message)}</em></p>`;
+            }
+        });
+
+        async function fetchTemplateProfile(name) {
+            const response = await fetch(`templates/${name}.binarypb`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const buffer = await response.arrayBuffer();
+            return { buffer, filename: `${name}.binarypb` };
+        }
+
+        async function loadTemplateProfile(name) {
+            if (decodedData && countCombos(decodedData.ComboGroups) > 0) {
+                pendingLoad = () => fetchTemplateProfile(name);
+                document.getElementById('loadModeModal').style.display = 'block';
+                return;
+            }
+            try {
+                const { buffer, filename } = await fetchTemplateProfile(name);
+                loadBinaryPbBuffer(buffer, filename);
+            } catch (error) {
+                alert("Failed to load template profile: " + error.message);
+            }
+        }
 
         function recompileProtobuf() {
             if (!decodedData) return alert("No data to recompile!");
@@ -2304,7 +3173,8 @@
             return new Blob([buffer], { type: "application/octet-stream" });
         }
 
-        function dlProtobuf() {
+        async function dlProtobuf() {
+            await confirmBitMaskForDownload();
             const link = document.createElement("a");
             link.href = URL.createObjectURL(recompileProtobuf());
             link.download = `mod_${originalFilename}.binarypb`;
@@ -2314,6 +3184,10 @@
         let clearSessionFlag = false;
 
         function clearLocalStorageAndReload() {
+            if (!confirm("Clear the stored session? This discards any unsaved edits and reloads the page.")) {
+                return;
+            }
+
             // Set the flag to indicate that localStorage has been cleared
             clearSessionFlag = true;
 
@@ -2402,6 +3276,7 @@
         }
         
         async function createZipWithSubdirectories() {
+            await confirmBitMaskForDownload();
             let curr_time = getFormattedDate();
             // Create a new ZIP instance
             const zip = new JSZip();
@@ -2414,14 +3289,21 @@
             // Magisk update-binary base64
             const sampleBase64 = "IyEvc2Jpbi9zaAoKIyMjIyMjIyMjIyMjIyMjIyMKIyBJbml0aWFsaXphdGlvbgojIyMjIyMjIyMjIyMjIyMjIwoKdW1hc2sgMDIyCgojIGVjaG8gYmVmb3JlIGxvYWRpbmcgdXRpbF9mdW5jdGlvbnMKdWlfcHJpbnQoKSB7IGVjaG8gIiQxIjsgfQoKcmVxdWlyZV9uZXdfbWFnaXNrKCkgewogIHVpX3ByaW50ICIqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqIgogIHVpX3ByaW50ICIgUGxlYXNlIGluc3RhbGwgTWFnaXNrIHYyMC40KyEgIgogIHVpX3ByaW50ICIqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqIgogIGV4aXQgMQp9CgojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCiMgTG9hZCB1dGlsX2Z1bmN0aW9ucy5zaAojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCgpPVVRGRD0kMgpaSVBGSUxFPSQzCgptb3VudCAvZGF0YSAyPi9kZXYvbnVsbAoKWyAtZiAvZGF0YS9hZGIvbWFnaXNrL3V0aWxfZnVuY3Rpb25zLnNoIF0gfHwgcmVxdWlyZV9uZXdfbWFnaXNrCi4gL2RhdGEvYWRiL21hZ2lzay91dGlsX2Z1bmN0aW9ucy5zaApbICRNQUdJU0tfVkVSX0NPREUgLWx0IDIwNDAwIF0gJiYgcmVxdWlyZV9uZXdfbWFnaXNrCgppbnN0YWxsX21vZHVsZQpleGl0IDAK";
             
-            const customizesh_file = `set_perm_recursive $MODPATH 0 0 0755 0644
-chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/${originalFilename}.binarypb`;
+            const comboCount = countCombos(decodedData.ComboGroups);
+
+            const customizesh_file = `ui_print "- BinaryPB Band Editor"
+ui_print "  by jchin14 - https://github.com/jchin14/binarypb-band-editor"
+ui_print "  ${originalFilename}: ${comboCount} combos"${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? `
+ui_print "  Also overwriting WILDCARD"` : ""}
+set_perm_recursive $MODPATH 0 0 0755 0644
+chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/${originalFilename}.binarypb${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? `
+chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/WILDCARD.binarypb` : ""}`;
             const moduleprop_file = `id=PixelUecap
-name=Pixel Uecapa mod
+name=BinaryPB Band Editor
 version=${curr_time}
 versionCode=${(Date.now()).toString().slice(9)}
 author=jchin14
-description=Replaces ${originalFilename}. Generated with https://binarypb.jchin.au.
+description=https://github.com/jchin14/binarypb-band-editor - Replaces ${originalFilename}${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? " and WILDCARD" : ""}, ${comboCount} combos. Generated with https://binarypb.jchin.au.
 support=https://github.com/jchin14/binarypb-band-editor`;
 
             // Convert base64 to binary
@@ -2441,7 +3323,10 @@ support=https://github.com/jchin14/binarypb-band-editor`;
             folder1.file("updater-script", "#MAGISK", { unixPermissions: "644" });
 
             folder2.file(`${originalFilename}.binarypb`, recompileProtobuf(), { unixPermissions: "644" });
-            
+            if (alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") {
+                folder2.file("WILDCARD.binarypb", recompileProtobuf(), { unixPermissions: "644" });
+            }
+
             try {
                 // Generate the ZIP file
                 const content = await zip.generateAsync({
