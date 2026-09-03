@@ -358,6 +358,18 @@
             display: flex;
             justify-content: space-evenly;
         }
+        .patch-hint {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .patch-hint-required {
+            color: light-dark(#b45309, #f0b429);
+        }
+        .patch-hint-caution {
+            color: light-dark(#b91c1c, #f87171);
+        }
         .groupheader {
             color: #666;
             padding: 0px;
@@ -764,6 +776,7 @@
             <h3>Help</h3>
             <p class="help-more">For more detailed instructions, visit the <a href="https://github.com/jchin14/binarypb-band-editor#readme" target="_blank" rel="noopener">GitHub README</a>.</p>
             <p class="help-disclaimer"><b>Disclaimer:</b> the stock Wildcard, Telstra, Optus, and VHA template profiles were pulled from a Pixel 7 Pro in Australia in August 2026. They may not match your device, carrier, or region, and may be outdated. Use them at your own risk — they may cause instability with calling or data. Test thoroughly before relying on a patched phone in an emergency.</p>
+            <p class="help-disclaimer"><b>Note:</b> this editor has only been tested on desktop browsers. Mobile is not recommended.</p>
             <div class="help-section">
                 <h4>Top bar</h4>
                 <ul>
@@ -786,7 +799,7 @@
                     <li><b>Integrity field + Save/Restore</b> — some binarypbs require an integrity value matching your phone's active file; Save/Restore store it in a cookie for next time.</li>
                     <li><b>FeatureSets: Add</b> — define custom downlink/uplink feature sets to reference from combos.</li>
                     <li><b>FeatureSets: JSON</b> — view/edit the raw feature set lists as JSON.</li>
-                    <li><b>Apply BM 65k patch</b> — patches the bitmask so all bands are allowed (Pixel 7/8; always 0 on Pixel 9).</li>
+                    <li><b>Apply BM 65k patch</b> — <b>required on Pixel 7/8</b> to enable all bands in the profile (patches every combo's bitmask to 65535). Not needed on Pixel 9, where this field is always 0.</li>
                     <li><b>Integrity ON/OFF</b> — toggles whether the integrity field is present in the file.</li>
                 </ul>
             </div>
@@ -1259,8 +1272,10 @@
                     <button title="Edit available FeatureSets" id="editFeatureSetsBtn" onclick="editFeatureSets(1)">JSON</button>
                     </span>
                 <span id="infoPatches">Patches:
-                    <button title="65k patch is useful on Pixel 7/8 series for allowing all bands. On Pixel 9 series this is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
-                    <button title="Integrity field is present on some .binarypbs, it has to match the same value as your currently active binarypb on your phone." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
+                    <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
+                    <button title="Auto-set from your imported file — don't touch unless you know what you're doing. If present, it must match the value your phone's currently active binarypb has." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
+                    <span class="patch-hint patch-hint-required">⚠ Required on Pixel 7/8</span>
+                    <span class="patch-hint patch-hint-caution">⚠ Integrity is auto-set from your file — don't touch unless you know what you're doing</span>
                     </span>
                 </div></div>
             <table class="main-table" style="border-collapse: collapse;">
