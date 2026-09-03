@@ -4,6 +4,8 @@
 
 **Live editor:** [binarypb.jchin.au](https://binarypb.jchin.au)
 
+**Wiki:** [Usage guides, search syntax, rooted workflow, and FAQ](https://github.com/jchin14/binarypb-band-editor/wiki)
+
 A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is based on [Pixel PB](https://nxij.github.io/pixel-pb/) and adds:
 
 - Stock carrier profile templates (Wildcard, Telstra, Optus, VHA) to load as a starting point, no file needed.
