@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="15" fill="#1c1f2a"/>
-  <text x="32" y="37" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="14" letter-spacing="-0.5" fill="#f5f6fa">n<tspan fill="#5eead4">78</tspan><tspan fill="#f5f6fa">+n</tspan><tspan fill="#5eead4">78</tspan></text>
+  <rect width="64" height="64" rx="15" fill="#12141c"/>
+  <text x="32" y="34" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="24" letter-spacing="-0.5" fill="#f5f6fa">n78</text>
+  <!-- 2CC: two component-carrier bars -->
+  <rect x="14" y="42" width="15" height="6" rx="3" fill="#5eead4"/>
+  <rect x="31" y="42" width="19" height="6" rx="3" fill="#5eead4" fill-opacity="0.55"/>
+  <text x="32" y="58" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="600" font-size="9" letter-spacing="0.3" fill="#8b93a7">100MHz</text>
 </svg>
