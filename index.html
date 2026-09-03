@@ -729,9 +729,8 @@
         <div class="header loaded-header" id="loadedControlsBar" style="display: none;">
             <div id="bandFilter">
                 <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41 | n78+*+" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41   Wildcard (exactly one other CC): n78+*   Open-ended (at least one/N more): n78+ / n78+*+">
-                <label title="Show only combos containing exactly the searched component carriers, with no extras"><input type="checkbox" id="exactComboFilter" onchange="exactComboFilter = this.checked; generateTable(decodedData);"> Exact combo only</label>
                 <label title="Only match a band if that component carrier actually has uplink features declared, not just present for downlink"><input type="checkbox" id="ulOnlyFilter" onchange="ulOnlyFilter = this.checked; generateTable(decodedData);"> Search UL only</label>
-                <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; ulOnlyFilter=false; document.getElementById('exactComboFilter').checked=false; document.getElementById('ulOnlyFilter').checked=false; generateTable(decodedData);">Clear</button>
+                <button onclick="bandFilter=''; bandFilterInput.value=''; ulOnlyFilter=false; document.getElementById('ulOnlyFilter').checked=false; generateTable(decodedData);">Clear</button>
             </div>
             <div id="ratFilterGroup" class="rat-filter-group" title="Show only combos whose bands are all within the checked network types">
                 <label><input type="checkbox" checked onchange="ratFilter['4G']=this.checked; generateTable(decodedData);"> 4G</label>
@@ -888,8 +887,7 @@
                 <ul>
                     <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
-                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. <code>*</code> is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit) instead of exact: <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
-                    <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
+                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. Matches are always exact — a combo must consist of exactly the named bands, with no unmentioned extras. <code>*</code> is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit) instead of exact: <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
                     <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
                     <li><b>Pagination / Per page</b> — move between pages of combos and control how many are shown at once.</li>
@@ -1328,7 +1326,6 @@
         let currentPage = 1;
         let rowsPerPage = 20;
         let bandFilter = "";
-        let exactComboFilter = false;
         let ulOnlyFilter = false;
         let ratFilter = { '4G': true, '5G': true };
 
@@ -1976,7 +1973,9 @@
                 const totalExtra = combo.cc.length - usedCcIndexes.size;
                 return totalExtra === wildcardCount && qualifyingExtra === wildcardCount;
             }
-            return !exactComboFilter || usedCcIndexes.size === combo.cc.length;
+            // Always require an exact match: every CC in the combo must be
+            // accounted for by a named term (no unmentioned extra bands).
+            return usedCcIndexes.size === combo.cc.length;
         }
 
         function updatePaginationControls(totalPages) {
