@@ -945,6 +945,18 @@
         </div>
     </div>
 
+    <div id="bmPatchModal" class="modal">
+        <div class="modal-content">
+            <h3>Which phone?</h3>
+            <p>Is this being installed on a Pixel 7 or Pixel 8?</p>
+            <p style="font-size: 12px;">The BM 65k patch is required on those devices to enable all bands. It isn't needed on Pixel 9 (where this field is always 0) and its effect on other phones is unknown.</p>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" id="bmPatchNoBtn">No</button>
+                <button class="modalbtn" id="bmPatchYesBtn">Yes</button>
+            </div>
+        </div>
+    </div>
+
     <div id="zipEntryModal" class="modal">
         <div class="modal-content">
             <h3>Choose a profile</h3>
@@ -1130,6 +1142,7 @@
             const compareModal = document.getElementById('compareModal');
             const loadModeModal = document.getElementById('loadModeModal');
             const zipEntryModal = document.getElementById('zipEntryModal');
+            const bmPatchModal = document.getElementById('bmPatchModal');
 
             if (event.target === jsonModal) {
                 closeModal();
@@ -1143,6 +1156,8 @@
                 closeLoadModeModal();
             } else if (event.target === zipEntryModal) {
                 document.getElementById('zipEntryCancelBtn')?.click();
+            } else if (event.target === bmPatchModal) {
+                document.getElementById('bmPatchNoBtn')?.click();
             }
         };
         // Close json modal on esc
@@ -1154,6 +1169,9 @@
                 closeLoadModeModal();
                 if (document.getElementById('zipEntryModal').style.display === 'block') {
                     document.getElementById('zipEntryCancelBtn')?.click();
+                }
+                if (document.getElementById('bmPatchModal').style.display === 'block') {
+                    document.getElementById('bmPatchNoBtn')?.click();
                 }
             }
         });
@@ -2599,9 +2617,21 @@
         // accordingly, so downloading always reflects the right device instead
         // of relying on whatever the manual toggle happens to be set to.
         function confirmBitMaskForDownload() {
-            if (!decodedData) return;
-            const isPixel78 = confirm("Is this being installed on a Pixel 7 or Pixel 8?\n\nOK — Yes: apply the BM 65k patch (required on those devices to enable all bands).\nCancel — No: download without the patch.");
-            setBitMask(isPixel78);
+            if (!decodedData) return Promise.resolve();
+            return new Promise(resolve => {
+                const modal = document.getElementById('bmPatchModal');
+                document.getElementById('bmPatchYesBtn').onclick = () => {
+                    modal.style.display = 'none';
+                    setBitMask(true);
+                    resolve();
+                };
+                document.getElementById('bmPatchNoBtn').onclick = () => {
+                    modal.style.display = 'none';
+                    setBitMask(false);
+                    resolve();
+                };
+                modal.style.display = 'block';
+            });
         }
 
         let integrityToggled = false; // Track toggle state
@@ -3135,8 +3165,8 @@
             return new Blob([buffer], { type: "application/octet-stream" });
         }
 
-        function dlProtobuf() {
-            confirmBitMaskForDownload();
+        async function dlProtobuf() {
+            await confirmBitMaskForDownload();
             const link = document.createElement("a");
             link.href = URL.createObjectURL(recompileProtobuf());
             link.download = `mod_${originalFilename}.binarypb`;
@@ -3238,7 +3268,7 @@
         }
         
         async function createZipWithSubdirectories() {
-            confirmBitMaskForDownload();
+            await confirmBitMaskForDownload();
             let curr_time = getFormattedDate();
             // Create a new ZIP instance
             const zip = new JSZip();
