@@ -6,6 +6,8 @@
     <meta name="color-scheme" content="light dark" />
     <title>BinaryPB Band Editor</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
     <script src="protobuf.min.js"></script>
     <script src="jszip.min.js"></script>
     <script defer src="/_vercel/speed-insights/script.js"></script>
@@ -913,7 +915,8 @@
                     <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. Matches are always exact — a combo must consist of exactly the named bands, with no unmentioned extras — unless you use one of these: a trailing <code>*</code> directly on a term means "contains", allowing any other bands too: <code>n78*</code> matches n78 alone or with anything else (shorthand for <code>n78|n78+</code>). A standalone <code>*</code> term is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit): <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
                     <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
-                    <li><b>Pagination / Per page</b> — move between pages of combos and control how many are shown at once.</li>
+                    <li><b>4G / 5G</b> — filter combos by network type (this format only ever encodes LTE and NR, so no 2G/3G option exists).</li>
+                    <li><b>« Prev / Next »</b> — jump straight to the first or last page, or step one page at a time. <b>Per page</b> controls how many combos are shown at once (including an "all rows" option for large profiles).</li>
                     <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
                     <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb.</li>
                     <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone.</li>
