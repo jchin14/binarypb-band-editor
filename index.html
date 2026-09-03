@@ -358,6 +358,18 @@
             display: flex;
             justify-content: space-evenly;
         }
+        .patch-hint {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .patch-hint-required {
+            color: light-dark(#b45309, #f0b429);
+        }
+        .patch-hint-caution {
+            color: light-dark(#b91c1c, #f87171);
+        }
         .groupheader {
             color: #666;
             padding: 0px;
@@ -1260,7 +1272,9 @@
                     </span>
                 <span id="infoPatches">Patches:
                     <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
-                    <button title="Integrity field is present on some .binarypbs, it has to match the same value as your currently active binarypb on your phone." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
+                    <button title="Auto-set from your imported file — don't touch unless you know what you're doing. If present, it must match the value your phone's currently active binarypb has." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
+                    <span class="patch-hint patch-hint-required">⚠ Required on Pixel 7/8</span>
+                    <span class="patch-hint patch-hint-caution">⚠ Integrity is auto-set from your file — don't touch unless you know what you're doing</span>
                     </span>
                 </div></div>
             <table class="main-table" style="border-collapse: collapse;">
