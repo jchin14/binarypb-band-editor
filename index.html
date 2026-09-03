@@ -786,7 +786,7 @@
                     <li><b>Integrity field + Save/Restore</b> — some binarypbs require an integrity value matching your phone's active file; Save/Restore store it in a cookie for next time.</li>
                     <li><b>FeatureSets: Add</b> — define custom downlink/uplink feature sets to reference from combos.</li>
                     <li><b>FeatureSets: JSON</b> — view/edit the raw feature set lists as JSON.</li>
-                    <li><b>Apply BM 65k patch</b> — patches the bitmask so all bands are allowed (Pixel 7/8; always 0 on Pixel 9).</li>
+                    <li><b>Apply BM 65k patch</b> — <b>required on Pixel 7/8</b> to enable all bands in the profile (patches every combo's bitmask to 65535). Not needed on Pixel 9, where this field is always 0.</li>
                     <li><b>Integrity ON/OFF</b> — toggles whether the integrity field is present in the file.</li>
                 </ul>
             </div>
@@ -1259,7 +1259,7 @@
                     <button title="Edit available FeatureSets" id="editFeatureSetsBtn" onclick="editFeatureSets(1)">JSON</button>
                     </span>
                 <span id="infoPatches">Patches:
-                    <button title="65k patch is useful on Pixel 7/8 series for allowing all bands. On Pixel 9 series this is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
+                    <button title="Required on Pixel 7/8 to allow all bands — apply before flashing. Not needed on Pixel 9, where this field is always 0." id="bitMaskToggleBtn" onclick="toggleBitMask()">Apply BM 65k patch</button>
                     <button title="Integrity field is present on some .binarypbs, it has to match the same value as your currently active binarypb on your phone." id="toggleIntegrityBtn" onclick="toggleIntegrity()">Integrity ${decodedData.hasOwnProperty('unknown') ? "OFF" : "ON"}</button>
                     </span>
                 </div></div>
