@@ -8,6 +8,10 @@
 
 A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is based on [Pixel PB](https://nxij.github.io/pixel-pb/) and adds stock carrier profile templates, bulk row/field editing, a boolean/wildcard search syntax, combo-text transfer between profiles, and a Magisk module export with an optional `WILDCARD.binarypb` overlay. See the [wiki](https://github.com/jchin14/binarypb-band-editor/wiki) for the full feature rundown, usage guide, and search syntax reference — or use the in-app **Help** button, which covers every button and field.
 
+## Disclaimer
+
+This tool has been tested on Pixel phones and should work on any phone using a Samsung (Shannon) modem, but this is **not guaranteed**. Test that everything works correctly before relying on a patched phone in an emergency. The author is not liable for any issues to your phone.
+
 ## UE capabilities
 
 **UE** means *User Equipment*: the phone or modem. A UE-capability profile tells the mobile network which bands, carrier-aggregation combinations, bandwidth classes, MIMO, and modulation-feature combinations the device advertises as supported.
