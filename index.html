@@ -366,7 +366,7 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1;
+            z-index: 3;
             left: 0;
             top: 0;
             width: 100%;
@@ -392,6 +392,28 @@
             width: 50%;
             max-height: 80vh;
             overflow-y: auto;
+        }
+        .compare-modal-content {
+            width: 60%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .compare-meta-table {
+            width: 100%;
+            margin: 10px 0;
+            border-collapse: collapse;
+        }
+        .compare-meta-table th, .compare-meta-table td {
+            border: 1px solid light-dark(var(--offwhite), var(--grey));
+            padding: 4px 8px;
+            text-align: left;
+        }
+        .compare-combo-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 4px 0 12px;
+            padding-left: 20px;
+            font-size: 13px;
         }
         .help-section h4 {
             margin-bottom: 4px;
@@ -739,6 +761,7 @@
                 <option value="OPTUS">Optus</option>
                 <option value="VHA">VHA</option>
             </select>
+            <button id="compareBtn" title="Compare the loaded profile against another .binarypb or Magisk zip" onclick="showCompareModal()">⇄ Compare</button>
             <button id="clearLocalStorageBtn" title="Clear the stored session" onclick="clearLocalStorageAndReload()">Clear session</button>
             <button id="helpBtn" title="Toggle help" onclick="toggleHelpModal()">
                 <span class="help-icon">?</span>
@@ -900,6 +923,18 @@
         </div>
     </div>
 
+    <div id="compareModal" class="modal">
+        <div class="modal-content compare-modal-content">
+            <h3>Compare profiles</h3>
+            <p>Compares the currently loaded profile against another .binarypb file or Magisk module .zip. Combos are matched by their band composition, ignoring band order.</p>
+            <input type="file" id="compareFileInput" accept=".binarypb,.zip">
+            <div id="compareResults"></div>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" onclick="closeCompareModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for help -->
     <div id="helpModal" class="modal">
         <div class="modal-content help-modal-content">
@@ -911,6 +946,7 @@
                 <h4>Top bar</h4>
                 <ul>
                     <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically.</li>
+                    <li><b>⇄ Compare</b> — compares the currently loaded profile against another .binarypb or Magisk zip you pick, matching combos by band composition (order-independent) and listing which combos are only in one profile or the other.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
                     <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. Matches are always exact — a combo must consist of exactly the named bands, with no unmentioned extras — unless you use one of these: a trailing <code>*</code> directly on a term means "contains", allowing any other bands too: <code>n78*</code> matches n78 alone or with anything else (shorthand for <code>n78|n78+</code>). A standalone <code>*</code> term is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit): <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
                     <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
@@ -1045,6 +1081,7 @@
             const jsonModal = document.getElementById('jsonModal');
             const customFeatureModal = document.getElementById('customFeatureModal');
             const helpModal = document.getElementById('helpModal');
+            const compareModal = document.getElementById('compareModal');
 
             if (event.target === jsonModal) {
                 closeModal();
@@ -1052,6 +1089,8 @@
                 closeCustomFeatureModal();
             } else if (event.target === helpModal) {
                 closeHelpModal();
+            } else if (event.target === compareModal) {
+                closeCompareModal();
             }
         };
         // Close json modal on esc
@@ -1059,6 +1098,7 @@
             if (event.key === "Escape") {
                 closeModal();
                 closeCustomFeatureModal();
+                closeCompareModal();
             }
         });
 
@@ -2715,38 +2755,145 @@
             }
         }
 
-        document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
+        // Reads a .binarypb file, or pulls one out of a Magisk module .zip.
+        async function extractBinaryPbBytes(file) {
             if (file.name.toLowerCase().endsWith('.zip')) {
-                loadFromMagiskZip(file);
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                loadBinaryPbBuffer(e.target.result, file.name);
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        async function loadFromMagiskZip(file) {
-            try {
                 const zip = await JSZip.loadAsync(file);
                 const entry = Object.values(zip.files).find(f =>
                     !f.dir && f.name.toLowerCase().endsWith('.binarypb')
                 );
-                if (!entry) {
-                    alert("No .binarypb file found inside this zip.");
-                    return;
-                }
+                if (!entry) throw new Error("No .binarypb file found inside this zip.");
                 const buffer = await entry.async('arraybuffer');
-                loadBinaryPbBuffer(buffer, entry.name.split('/').pop());
-            } catch (error) {
-                alert("Failed to read zip: " + error.message);
+                return { buffer, filename: entry.name.split('/').pop() };
             }
+            const buffer = await file.arrayBuffer();
+            return { buffer, filename: file.name };
         }
+
+        document.getElementById('fileInput').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const { buffer, filename } = await extractBinaryPbBytes(file);
+                loadBinaryPbBuffer(buffer, filename);
+            } catch (error) {
+                alert("Failed to load file: " + error.message);
+            }
+        });
+
+        function showCompareModal() {
+            if (!decodedData) {
+                alert("Load a profile first, then compare it against another one.");
+                return;
+            }
+            document.getElementById('compareResults').innerHTML = '';
+            document.getElementById('compareFileInput').value = '';
+            document.getElementById('compareModal').style.display = 'block';
+        }
+
+        function closeCompareModal() {
+            document.getElementById('compareModal').style.display = 'none';
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // A combo's "signature" is its sorted list of band+class strings, so
+        // combos with the same bands in a different order still match.
+        function comboSignature(combo) {
+            return combo.cc
+                .map(cc => bandParseInt(cc.bwClassDL, cc.band))
+                .sort()
+                .join('+');
+        }
+
+        function buildComboSignatureCounts(data) {
+            const counts = new Map();
+            data.ComboGroups.forEach(group => {
+                group.combo.forEach(combo => {
+                    const sig = comboSignature(combo);
+                    counts.set(sig, (counts.get(sig) || 0) + 1);
+                });
+            });
+            return counts;
+        }
+
+        function integrityLabel(data) {
+            return data.hasOwnProperty('unknown') ? data.unknown : 'OFF';
+        }
+
+        function runProfileComparison(otherData, otherFilename) {
+            const aName = originalFilename || "Current profile";
+            const bName = otherFilename.endsWith(".binarypb") ? otherFilename.slice(0, -9) : otherFilename;
+
+            const aCounts = buildComboSignatureCounts(decodedData);
+            const bCounts = buildComboSignatureCounts(otherData);
+
+            const onlyInA = [];
+            const onlyInB = [];
+            let common = 0;
+
+            new Set([...aCounts.keys(), ...bCounts.keys()]).forEach(sig => {
+                const aCount = aCounts.get(sig) || 0;
+                const bCount = bCounts.get(sig) || 0;
+                common += Math.min(aCount, bCount);
+                if (aCount > bCount) onlyInA.push({ sig, count: aCount - bCount });
+                else if (bCount > aCount) onlyInB.push({ sig, count: bCount - aCount });
+            });
+
+            onlyInA.sort((x, y) => x.sig.localeCompare(y.sig));
+            onlyInB.sort((x, y) => x.sig.localeCompare(y.sig));
+
+            renderComparisonResults({
+                aName, bName,
+                aId: decodedData.id, bId: otherData.id,
+                aVersion: decodedData.version, bVersion: otherData.version,
+                aIntegrity: integrityLabel(decodedData), bIntegrity: integrityLabel(otherData),
+                aTotal: countCombos(decodedData.ComboGroups), bTotal: countCombos(otherData.ComboGroups),
+                common, onlyInA, onlyInB
+            });
+        }
+
+        function renderComparisonResults(r) {
+            const renderList = items => items.length
+                ? `<ul class="compare-combo-list">${items.map(i =>
+                    `<li><code>${escapeHtml(i.sig)}</code>${i.count > 1 ? ` &times;${i.count}` : ''}</li>`
+                  ).join('')}</ul>`
+                : `<p><em>None</em></p>`;
+
+            document.getElementById('compareResults').innerHTML = `
+                <table class="compare-meta-table">
+                    <tr><th></th><th>${escapeHtml(r.aName)}</th><th>${escapeHtml(r.bName)}</th></tr>
+                    <tr><td>ID</td><td>${r.aId}</td><td>${r.bId}</td></tr>
+                    <tr><td>Version</td><td>${r.aVersion}</td><td>${r.bVersion}</td></tr>
+                    <tr><td>Integrity</td><td>${r.aIntegrity}</td><td>${r.bIntegrity}</td></tr>
+                    <tr><td>Total combos</td><td>${r.aTotal}</td><td>${r.bTotal}</td></tr>
+                </table>
+                <p><b>${r.common}</b> combo${r.common === 1 ? '' : 's'} match between both profiles (band composition, order-independent).</p>
+                <h4>Only in ${escapeHtml(r.aName)} (${r.onlyInA.reduce((s, i) => s + i.count, 0)})</h4>
+                ${renderList(r.onlyInA)}
+                <h4>Only in ${escapeHtml(r.bName)} (${r.onlyInB.reduce((s, i) => s + i.count, 0)})</h4>
+                ${renderList(r.onlyInB)}
+            `;
+        }
+
+        document.getElementById('compareFileInput').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('compareResults').innerHTML = '<p>Comparing...</p>';
+            try {
+                const { buffer, filename } = await extractBinaryPbBytes(file);
+                const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
+                const otherData = UeCaps.toObject(decodedMessage, { defaults: true });
+                runProfileComparison(otherData, filename);
+            } catch (error) {
+                document.getElementById('compareResults').innerHTML =
+                    `<p><em>Failed to load file: ${escapeHtml(error.message)}</em></p>`;
+            }
+        });
 
         async function loadTemplateProfile(name) {
             try {
