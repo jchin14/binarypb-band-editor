@@ -1221,12 +1221,6 @@
             generateTable(decodedData);
         }
 
-        function changePageSize(newSize) {
-            rowsPerPage = parseInt(newSize, 10);
-            currentPage = 1; // Reset to first page when changing page size
-            generateTable(decodedData);
-        }
-
         function generateTable(decodedData) {
             filteredGroups = applyBandFilter(decodedData.ComboGroups);
             let totalRows = filteredGroups.length;
