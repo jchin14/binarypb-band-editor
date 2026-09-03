@@ -971,7 +971,7 @@
                     <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry) or replace the current profile completely.</li>
                     <li><b>+ New profile</b> — start with a completely empty profile so you can build combos from scratch, without loading a file first.</li>
                     <li><b>⇄ Compare</b> — compares the currently loaded profile against another .binarypb or Magisk zip you pick, matching combos by band composition (order-independent) and listing which combos are only in one profile or the other.</li>
-                    <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
+                    <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above). If a profile is already loaded, you'll be asked whether to add the template's combos in or replace the current profile, same as picking a file.</li>
                     <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. Matches are always exact — a combo must consist of exactly the named bands, with no unmentioned extras — unless you use one of these: a trailing <code>*</code> directly on a term means "contains", allowing any other bands too: <code>n78*</code> matches n78 alone or with anything else (shorthand for <code>n78|n78+</code>). A standalone <code>*</code> term is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit): <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
                     <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
@@ -2846,21 +2846,24 @@
             generateTable(decodedData);
         }
 
-        let pendingLoadFile = null;
+        // Set to an async function returning { buffer, filename } while the
+        // load-mode modal is open, so resolveLoadMode can pull bytes from
+        // whichever source (file picker or stock template) triggered it.
+        let pendingLoad = null;
 
         function closeLoadModeModal() {
             document.getElementById('loadModeModal').style.display = 'none';
-            pendingLoadFile = null;
+            pendingLoad = null;
             document.getElementById('fileInput').value = '';
         }
 
         async function resolveLoadMode(mode) {
-            const file = pendingLoadFile;
+            const getBufferAndFilename = pendingLoad;
             document.getElementById('loadModeModal').style.display = 'none';
-            pendingLoadFile = null;
-            if (!file) return;
+            pendingLoad = null;
+            if (!getBufferAndFilename) return;
             try {
-                const { buffer, filename } = await extractBinaryPbBytes(file);
+                const { buffer, filename } = await getBufferAndFilename();
                 if (mode === 'add') {
                     const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
                     const otherData = UeCaps.toObject(decodedMessage, { defaults: true });
@@ -2879,7 +2882,7 @@
             const file = event.target.files[0];
             if (!file) return;
             if (decodedData && countCombos(decodedData.ComboGroups) > 0) {
-                pendingLoadFile = file;
+                pendingLoad = () => extractBinaryPbBytes(file);
                 document.getElementById('loadModeModal').style.display = 'block';
                 return;
             }
@@ -3007,12 +3010,22 @@
             }
         });
 
+        async function fetchTemplateProfile(name) {
+            const response = await fetch(`templates/${name}.binarypb`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const buffer = await response.arrayBuffer();
+            return { buffer, filename: `${name}.binarypb` };
+        }
+
         async function loadTemplateProfile(name) {
+            if (decodedData && countCombos(decodedData.ComboGroups) > 0) {
+                pendingLoad = () => fetchTemplateProfile(name);
+                document.getElementById('loadModeModal').style.display = 'block';
+                return;
+            }
             try {
-                const response = await fetch(`templates/${name}.binarypb`);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const buffer = await response.arrayBuffer();
-                loadBinaryPbBuffer(buffer, `${name}.binarypb`);
+                const { buffer, filename } = await fetchTemplateProfile(name);
+                loadBinaryPbBuffer(buffer, filename);
             } catch (error) {
                 alert("Failed to load template profile: " + error.message);
             }
