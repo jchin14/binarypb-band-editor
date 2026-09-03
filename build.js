@@ -11,6 +11,12 @@ for (const file of ['favicon.svg', 'jszip.min.js', 'protobuf.min.js']) {
     fs.copyFileSync(path.join(__dirname, file), path.join(outDir, file));
 }
 
+const templatesOutDir = path.join(outDir, 'templates');
+fs.mkdirSync(templatesOutDir);
+for (const file of fs.readdirSync(path.join(__dirname, 'templates'))) {
+    fs.copyFileSync(path.join(__dirname, 'templates', file), path.join(templatesOutDir, file));
+}
+
 const sha = (process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7);
 const html = fs
     .readFileSync(path.join(__dirname, 'index.html'), 'utf8')
