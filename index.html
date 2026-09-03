@@ -724,14 +724,12 @@
         </div>
         <div class="header loaded-header" id="loadedControlsBar" style="display: none;">
             <div id="bandFilter">
-                <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41">
+                <input type="text" id="bandFilterInput" placeholder="1+3+7C | !n78 | n78^n41 | n78+*" title="AND: 1+3   OR: 1|3   NOT: !3   XOR (exactly one): n78^n41   Wildcard (one other CC): n78+*">
                 <label title="Show only combos containing exactly the searched component carriers, with no extras"><input type="checkbox" id="exactComboFilter" onchange="exactComboFilter = this.checked; generateTable(decodedData);"> Exact combo only</label>
                 <label title="Only match a band if that component carrier actually has uplink features declared, not just present for downlink"><input type="checkbox" id="ulOnlyFilter" onchange="ulOnlyFilter = this.checked; generateTable(decodedData);"> Search UL only</label>
                 <button onclick="bandFilter=''; bandFilterInput.value=''; exactComboFilter=false; ulOnlyFilter=false; document.getElementById('exactComboFilter').checked=false; document.getElementById('ulOnlyFilter').checked=false; generateTable(decodedData);">Clear</button>
             </div>
             <div id="ratFilterGroup" class="rat-filter-group" title="Show only combos whose bands are all within the checked network types">
-                <label><input type="checkbox" checked onchange="ratFilter['2G']=this.checked; generateTable(decodedData);"> 2G</label>
-                <label><input type="checkbox" checked onchange="ratFilter['3G']=this.checked; generateTable(decodedData);"> 3G</label>
                 <label><input type="checkbox" checked onchange="ratFilter['4G']=this.checked; generateTable(decodedData);"> 4G</label>
                 <label><input type="checkbox" checked onchange="ratFilter['5G']=this.checked; generateTable(decodedData);"> 5G</label>
             </div>
@@ -886,7 +884,7 @@
                 <ul>
                     <li><b>Choose file</b> — load a .binarypb file from your phone to start editing.</li>
                     <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above).</li>
-                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. A trailing <code>+</code> means "plus N other unspecified CCs": <code>n78+</code> matches combos with n78 and exactly one other band; <code>n78++</code> matches n78 plus exactly two others.</li>
+                    <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. <code>*</code> is a wildcard meaning "one other unspecified band": <code>n78+*</code> matches combos with n78 and exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others.</li>
                     <li><b>Exact combo only</b> — when checked, only combos with exactly those component carriers (no extras) match the filter.</li>
                     <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
@@ -1328,10 +1326,9 @@
         let bandFilter = "";
         let exactComboFilter = false;
         let ulOnlyFilter = false;
-        let ratFilter = { '2G': true, '3G': true, '4G': true, '5G': true };
+        let ratFilter = { '4G': true, '5G': true };
 
-        // This format only ever encodes LTE (4G) and NR (5G) bands, so 2G/3G
-        // combos never exist - those checkboxes just filter everything out.
+        // This format only ever encodes LTE (4G) and NR (5G) bands.
         function bandRat(band) {
             return band > 10000 ? '5G' : '4G';
         }
@@ -1341,7 +1338,7 @@
         }
 
         function applyRatFilter(comboGroups) {
-            if (ratFilter['2G'] && ratFilter['3G'] && ratFilter['4G'] && ratFilter['5G']) return comboGroups;
+            if (ratFilter['4G'] && ratFilter['5G']) return comboGroups;
             return comboGroups.filter(group => group.combo.some(combo => comboMatchesRatFilter(combo)));
         }
         let filteredGroups = [];
@@ -1902,24 +1899,21 @@
         // Each positive term must match a different component carrier. This
         // makes n78+n78 mean two n78 carriers, not one n78 matched twice.
         //
-        // A run of trailing "+" at the end of the group means "plus N other
-        // (unspecified) component carriers": "n78+" matches combos with n78
-        // and exactly one other CC; "n78++" matches n78 plus exactly two
-        // other CCs. This forces the combo's total CC count to equal the
-        // number of matched terms plus that trailing-"+" count.
+        // "*" is a wildcard term meaning "one other unspecified component
+        // carrier": "n78+*" matches combos with n78 and exactly one other
+        // CC; "n78+*+*" matches n78 plus exactly two other CCs. This forces
+        // the combo's total CC count to equal the number of named terms
+        // plus the number of "*" wildcards. When "Search UL only" is on,
+        // wildcard slots must also be filled by a CC that has UL features.
         function comboMatchesAndGroup(combo, group) {
-            let wildcardCount = 0;
-            const trailingPlus = group.match(/\++$/);
-            if (trailingPlus) {
-                wildcardCount = trailingPlus[0].length;
-                group = group.slice(0, -wildcardCount);
-            }
-
             const terms = group.split("+").filter(Boolean);
             const positiveBands = [];
             const negativeBands = [];
+            let wildcardCount = 0;
             terms.forEach(term => {
-                if (term.startsWith("!")) {
+                if (term === "*") {
+                    wildcardCount++;
+                } else if (term.startsWith("!")) {
                     negativeBands.push(bandParseStr(term.slice(1)));
                 } else {
                     positiveBands.push(bandParseStr(term));
@@ -1955,7 +1949,16 @@
             if (anyNegativeMatched) return false;
 
             if (wildcardCount > 0) {
-                return combo.cc.length === usedCcIndexes.size + wildcardCount;
+                if (combo.cc.length !== usedCcIndexes.size + wildcardCount) return false;
+                // Every CC filling a wildcard slot must also satisfy the
+                // UL-only constraint when it's on, not just the named bands.
+                if (ulOnlyFilter) {
+                    return combo.cc.every((ccItem, index) =>
+                        usedCcIndexes.has(index) ||
+                        (ccItem.ulFeaturePerCCIds && Object.keys(ccItem.ulFeaturePerCCIds).length > 0)
+                    );
+                }
+                return true;
             }
             return !exactComboFilter || usedCcIndexes.size === combo.cc.length;
         }
