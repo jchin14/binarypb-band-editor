@@ -39,7 +39,6 @@
         select { background-color: light-dark(var(--offwhite), var(--grey)); border-radius: var(--radius); }
         input[type='text'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
         input[type='number'] { background-color: light-dark(var(--offwhite), #474747); border-radius: var(--radius); }
-        .band-input { width: 60px; }
         #bandFilterInput { width: 260px; }
         h3, h4 { color: var(--white), var(--dark-grey)}
 
@@ -827,6 +826,8 @@
             <div id="recompileBtn">
                 <label for="filenameInput">Filename:</label>
                 <input type="text" id="filenameInput" value="" onchange="updateFilename(this.value)">
+                <label for="moduleVersionInput">Version:</label>
+                <input type="text" id="moduleVersionInput" value="" oninput="moduleVersionEdited = true;" title="Used as the Magisk module version and the downloaded zip's filename suffix. Defaults to the current date/time; edit to set a custom value.">
                 <button title="Download the compiled binarypb file" onclick="dlProtobuf()">↓ .binarypb</button>
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
                 <label title="Also overlay this same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads"><input type="checkbox" id="alsoOverrideWildcard" onchange="alsoOverrideWildcard = this.checked;"> Also override WILDCARD</label>
@@ -979,11 +980,12 @@
     <div id="loadModeModal" class="modal">
         <div class="modal-content">
             <h3>Load profile</h3>
-            <p>A profile is already loaded. Do you want to add this file's combos to it, or replace it completely?</p>
+            <p>A profile is already loaded. Do you want to add this file's combos to it, subtract this file's combos from it, or replace it completely?</p>
             <div style="margin-top: 12px; text-align: right;">
                 <button class="modalbtn" onclick="closeLoadModeModal()">Cancel</button>
                 <button class="modalbtn" onclick="resolveLoadMode('replace')">Replace all combos</button>
                 <button class="modalbtn" onclick="resolveLoadMode('add')">Add combos</button>
+                <button class="modalbtn" onclick="resolveLoadMode('subtract')">Subtract combos</button>
             </div>
         </div>
     </div>
@@ -1010,16 +1012,17 @@
             <div class="help-section">
                 <h4>Top bar</h4>
                 <ul>
-                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically — if the zip contains more than one .binarypb (a multi-carrier bundle), you'll be asked which one to open. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry, and combos whose band composition already exists are skipped) or replace the current profile completely.</li>
+                    <li><b>Choose file</b> — load a .binarypb file from your phone to start editing. You can also pick a Magisk module .zip (like one this app generated) and it'll pull the .binarypb out of it automatically — if the zip contains more than one .binarypb (a multi-carrier bundle), you'll be asked which one to open. If a profile is already loaded, you'll be asked whether to add the new file's combos into the current profile (feature sets are remapped so they still point at the right entry, and combos whose band composition already exists are skipped), subtract it from the current profile (removes any combo from the current profile whose band composition also appears in the loaded file, leaving only what's unique to your current profile), or replace the current profile completely.</li>
                     <li><b>+ New profile</b> — start with a completely empty profile so you can build combos from scratch, without loading a file first.</li>
                     <li><b>⇄ Compare</b> — compares the currently loaded profile against another .binarypb or Magisk zip you pick, matching combos by band composition (order-independent) and listing which combos are only in one profile or the other.</li>
-                    <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above). If a profile is already loaded, you'll be asked whether to add the template's combos in or replace the current profile, same as picking a file.</li>
+                    <li><b>Load stock profile</b> — load a stock Wildcard/Telstra/Optus/VHA template as a starting point (see disclaimer above). If a profile is already loaded, you'll be asked to add, subtract, or replace, same as picking a file.</li>
                     <li><b>Filter box</b> — show only combos matching a band expression: <code>+</code> AND (<code>1+3</code>), <code>|</code> OR (<code>1|3</code>), <code>!</code> NOT (<code>!n78</code>), <code>^</code> XOR/exactly-one (<code>n78^n41</code>). Combine them, e.g. <code>1+3+7C | !n78</code>. Matches are always exact — a combo must consist of exactly the named bands, with no unmentioned extras — unless you use one of these: a trailing <code>*</code> directly on a term means "contains", allowing any other bands too: <code>n78*</code> matches n78 alone or with anything else (shorthand for <code>n78|n78+</code>). A standalone <code>*</code> term is a wildcard meaning "exactly one other unspecified band": <code>n78+*</code> matches n78 plus exactly one other CC; <code>n78+*+*</code> matches n78 plus exactly two others. A trailing <code>+</code> with nothing after it means "and at least one more" (open-ended, no upper limit): <code>n78+</code> matches n78 plus anything else; <code>n78+*+</code> matches n78 plus at least two other bands.</li>
                     <li><b>Search UL only</b> — when checked, a band term only matches a component carrier that actually has uplink features declared, not one that's only present for downlink.</li>
                     <li><b>Clear</b> — reset the band filter.</li>
                     <li><b>4G / 5G</b> — filter combos by network type (this format only ever encodes LTE and NR, so no 2G/3G option exists).</li>
                     <li><b>« Prev / Next »</b> — jump straight to the first or last page, or step one page at a time. <b>Per page</b> controls how many combos are shown at once (including an "all rows" option for large profiles).</li>
-                    <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
+                    <li><b>Filename</b> — sets the output filename used by the download buttons. Enter multiple names separated by <code>;</code> (e.g. <code>TELSTRA;OPTUS</code>) to produce several identically-contented .binarypb files — as separate downloads for ↓ .binarypb, or bundled together in one zip for ↓ .zip.</li>
+                    <li><b>Version</b> — sets the Magisk module's <code>version</code> and the downloaded zip's filename suffix. Defaults to the current date/time and refreshes automatically until you edit it, after which your custom value is used instead.</li>
                     <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb. Asks whether the target phone is a Pixel 7/8 first, and sets the BM 65k patch accordingly before downloading.</li>
                     <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone. Asks the same Pixel 7/8 question first.</li>
                     <li><b>Also override WILDCARD</b> — when checked, the generated zip also overlays the same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads.</li>
@@ -1484,6 +1487,7 @@
         let bandFilter = "";
         let ulOnlyFilter = false;
         let alsoOverrideWildcard = false;
+        let moduleVersionEdited = false;
         let ratFilter = { '4G': true, '5G': true };
 
         // This format only ever encodes LTE (4G) and NR (5G) bands.
@@ -1782,6 +1786,9 @@
             document.getElementById("tableContainer").innerHTML = tableHTML;
             document.getElementById("loadedControlsBar").style.display = "flex";
             document.getElementById("recompileBtn").style.display = "block";
+            if (!moduleVersionEdited) {
+                document.getElementById("moduleVersionInput").value = getFormattedDate();
+            }
             document.getElementById("bandFilter").style.display = "block";
             document.getElementById("ratFilterGroup").style.display = "flex";
             document.getElementById("pageSizeSelector").style.display = "block";
@@ -2264,7 +2271,7 @@
                 featureSetList.forEach((feature, index) => {
                     let selected = (index === selectedValue) ? "selected" : '';
                     let disabled = (index === 0) ? "selected disabled hidden" : '';
-                    optionsHTML += `<option value="${index}" ${selected} ${disabled}>${feature}</option>`;
+                    optionsHTML += `<option value="${index}" ${selected} ${disabled}>${escapeHtml(feature)}</option>`;
                 });
             }
             
@@ -2852,15 +2859,15 @@
         let originalFilename;
 
         function loadBinaryPbBuffer(buffer, filename) {
-            originalFilename = filename.endsWith(".binarypb") ? filename.slice(0, -9) : filename;
-            document.getElementById("filenameInput").value = originalFilename || "default_filename";
             try {
                 const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
                 decodedData = UeCaps.toObject(decodedMessage, { defaults: true });
                 processDecodedMessage(decodedData);
+                originalFilename = filename.endsWith(".binarypb") ? filename.slice(0, -9) : filename;
+                document.getElementById("filenameInput").value = originalFilename || "default_filename";
                 generateTable(decodedData);
             } catch (error) {
-                document.getElementById('tableContainer').innerHTML = "Error decoding file: " + error.message;
+                document.getElementById('tableContainer').textContent = "Error decoding file: " + error.message;
             }
         }
 
@@ -2980,6 +2987,27 @@
             alert(`Added ${addedCount} new combo${addedCount === 1 ? '' : 's'}.${skippedCount > 0 ? ` Skipped ${skippedCount} duplicate${skippedCount === 1 ? '' : 's'} already in the profile.` : ''}`);
         }
 
+        // Removes any combo from the currently loaded profile whose band
+        // composition (order-independent) also appears in otherData, leaving
+        // only what's unique to the current profile (current − new).
+        function subtractProfileFromDecodedData(otherData) {
+            processDecodedMessage(otherData);
+            const otherSignatures = new Set();
+            (otherData.ComboGroups || []).forEach(group => group.combo.forEach(combo => otherSignatures.add(comboSignature(combo))));
+
+            const before = countCombos(decodedData.ComboGroups);
+            decodedData.ComboGroups = decodedData.ComboGroups
+                .map(group => ({
+                    ...group,
+                    combo: group.combo.filter(combo => !otherSignatures.has(comboSignature(combo))),
+                }))
+                .filter(group => group.combo.length > 0);
+            const removedCount = before - countCombos(decodedData.ComboGroups);
+
+            generateTable(decodedData);
+            alert(`Removed ${removedCount} combo${removedCount === 1 ? '' : 's'} also present in the loaded file.${countCombos(decodedData.ComboGroups) === 0 ? ' No combos remain.' : ''}`);
+        }
+
         // Set to an async function returning { buffer, filename } while the
         // load-mode modal is open, so resolveLoadMode can pull bytes from
         // whichever source (file picker or stock template) triggered it.
@@ -3002,6 +3030,10 @@
                     const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
                     const otherData = UeCaps.toObject(decodedMessage, { defaults: true });
                     mergeProfileIntoDecodedData(otherData);
+                } else if (mode === 'subtract') {
+                    const decodedMessage = UeCaps.decode(new Uint8Array(buffer));
+                    const otherData = UeCaps.toObject(decodedMessage, { defaults: true });
+                    subtractProfileFromDecodedData(otherData);
                 } else {
                     loadBinaryPbBuffer(buffer, filename);
                 }
@@ -3175,10 +3207,14 @@
 
         async function dlProtobuf() {
             await confirmBitMaskForDownload();
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(recompileProtobuf());
-            link.download = `mod_${originalFilename}.binarypb`;
-            link.click();
+            const url = URL.createObjectURL(recompileProtobuf());
+            parseFilenameList(originalFilename).forEach(name => {
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `mod_${name}.binarypb`;
+                link.click();
+            });
+            URL.revokeObjectURL(url);
         }
 
         let clearSessionFlag = false;
@@ -3266,6 +3302,17 @@
             originalFilename = newName;
         }
 
+        // Splits the filename field on ";" so e.g. "TELSTRA;OPTUS" produces
+        // multiple identically-contented .binarypb files. Trims whitespace,
+        // strips path-breaking characters, and drops empty/duplicate names.
+        function parseFilenameList(raw) {
+            const names = (raw || "")
+                .split(";")
+                .map(name => name.trim().replace(/[\\/\r\n]/g, ""))
+                .filter(name => name.length > 0);
+            return names.length > 0 ? [...new Set(names)] : ["default_filename"];
+        }
+
         function getFormattedDate() {
             const now = new Date();
             return now.getFullYear() + '.' +
@@ -3277,7 +3324,7 @@
         
         async function createZipWithSubdirectories() {
             await confirmBitMaskForDownload();
-            let curr_time = getFormattedDate();
+            let curr_time = document.getElementById("moduleVersionInput").value.replace(/[\\/\r\n]/g, "").trim() || getFormattedDate();
             // Create a new ZIP instance
             const zip = new JSZip();
             
@@ -3291,19 +3338,22 @@
             
             const comboCount = countCombos(decodedData.ComboGroups);
 
+            const targetNames = parseFilenameList(originalFilename);
+            if (alsoOverrideWildcard && !targetNames.some(name => name.toUpperCase() === "WILDCARD")) {
+                targetNames.push("WILDCARD");
+            }
+
             const customizesh_file = `ui_print "- BinaryPB Band Editor"
 ui_print "  by jchin14 - https://github.com/jchin14/binarypb-band-editor"
-ui_print "  ${originalFilename}: ${comboCount} combos"${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? `
-ui_print "  Also overwriting WILDCARD"` : ""}
+ui_print "  ${targetNames.join(", ")}: ${comboCount} combos"
 set_perm_recursive $MODPATH 0 0 0755 0644
-chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/${originalFilename}.binarypb${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? `
-chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/WILDCARD.binarypb` : ""}`;
+${targetNames.map(name => `chcon u:object_r:vendor_fw_file:s0 $MODPATH/system/vendor/firmware/uecapconfig/${name}.binarypb`).join("\n")}`;
             const moduleprop_file = `id=PixelUecap
 name=BinaryPB Band Editor
 version=${curr_time}
 versionCode=${(Date.now()).toString().slice(9)}
 author=jchin14
-description=https://github.com/jchin14/binarypb-band-editor - Replaces ${originalFilename}${(alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") ? " and WILDCARD" : ""}, ${comboCount} combos. Generated with https://binarypb.jchin.au.
+description=https://github.com/jchin14/binarypb-band-editor - Replaces ${targetNames.join(", ")}, ${comboCount} combos. Generated with https://binarypb.jchin.au.
 support=https://github.com/jchin14/binarypb-band-editor`;
 
             // Convert base64 to binary
@@ -3322,10 +3372,9 @@ support=https://github.com/jchin14/binarypb-band-editor`;
             folder1.file("update-binary", bytes, { binary: true, unixPermissions: "644" });
             folder1.file("updater-script", "#MAGISK", { unixPermissions: "644" });
 
-            folder2.file(`${originalFilename}.binarypb`, recompileProtobuf(), { unixPermissions: "644" });
-            if (alsoOverrideWildcard && originalFilename.toUpperCase() !== "WILDCARD") {
-                folder2.file("WILDCARD.binarypb", recompileProtobuf(), { unixPermissions: "644" });
-            }
+            targetNames.forEach(name => {
+                folder2.file(`${name}.binarypb`, recompileProtobuf(), { unixPermissions: "644" });
+            });
 
             try {
                 // Generate the ZIP file
@@ -3342,7 +3391,7 @@ support=https://github.com/jchin14/binarypb-band-editor`;
                 const url = URL.createObjectURL(content);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `${originalFilename}-${curr_time}.zip`;
+                link.download = `${targetNames.join("+")}-${curr_time}.zip`;
                 
                 // Trigger download
                 document.body.appendChild(link);
