@@ -826,6 +826,8 @@
             <div id="recompileBtn">
                 <label for="filenameInput">Filename:</label>
                 <input type="text" id="filenameInput" value="" onchange="updateFilename(this.value)">
+                <label for="moduleVersionInput">Version:</label>
+                <input type="text" id="moduleVersionInput" value="" oninput="moduleVersionEdited = true;" title="Used as the Magisk module version and the downloaded zip's filename suffix. Defaults to the current date/time; edit to set a custom value.">
                 <button title="Download the compiled binarypb file" onclick="dlProtobuf()">↓ .binarypb</button>
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
                 <label title="Also overlay this same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads"><input type="checkbox" id="alsoOverrideWildcard" onchange="alsoOverrideWildcard = this.checked;"> Also override WILDCARD</label>
@@ -1020,6 +1022,7 @@
                     <li><b>4G / 5G</b> — filter combos by network type (this format only ever encodes LTE and NR, so no 2G/3G option exists).</li>
                     <li><b>« Prev / Next »</b> — jump straight to the first or last page, or step one page at a time. <b>Per page</b> controls how many combos are shown at once (including an "all rows" option for large profiles).</li>
                     <li><b>Filename</b> — sets the output filename used by the download buttons.</li>
+                    <li><b>Version</b> — sets the Magisk module's <code>version</code> and the downloaded zip's filename suffix. Defaults to the current date/time and refreshes automatically until you edit it, after which your custom value is used instead.</li>
                     <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb. Asks whether the target phone is a Pixel 7/8 first, and sets the BM 65k patch accordingly before downloading.</li>
                     <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone. Asks the same Pixel 7/8 question first.</li>
                     <li><b>Also override WILDCARD</b> — when checked, the generated zip also overlays the same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads.</li>
@@ -1484,6 +1487,7 @@
         let bandFilter = "";
         let ulOnlyFilter = false;
         let alsoOverrideWildcard = false;
+        let moduleVersionEdited = false;
         let ratFilter = { '4G': true, '5G': true };
 
         // This format only ever encodes LTE (4G) and NR (5G) bands.
@@ -1782,6 +1786,9 @@
             document.getElementById("tableContainer").innerHTML = tableHTML;
             document.getElementById("loadedControlsBar").style.display = "flex";
             document.getElementById("recompileBtn").style.display = "block";
+            if (!moduleVersionEdited) {
+                document.getElementById("moduleVersionInput").value = getFormattedDate();
+            }
             document.getElementById("bandFilter").style.display = "block";
             document.getElementById("ratFilterGroup").style.display = "flex";
             document.getElementById("pageSizeSelector").style.display = "block";
@@ -3302,7 +3309,7 @@
         
         async function createZipWithSubdirectories() {
             await confirmBitMaskForDownload();
-            let curr_time = getFormattedDate();
+            let curr_time = document.getElementById("moduleVersionInput").value.replace(/[\\/\r\n]/g, "").trim() || getFormattedDate();
             // Create a new ZIP instance
             const zip = new JSZip();
             
