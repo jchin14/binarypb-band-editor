@@ -276,6 +276,41 @@
             padding: 6px 12px;
             gap: 8px;
             z-index: 2;
+            overflow: hidden;
+            max-height: 800px;
+            transition: max-height 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+        }
+        .header.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+            box-shadow: none;
+        }
+        .header-toggle-bar {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            background-color: light-dark(var(--blue), var(--dark-grey));
+            transition: top 0.25s ease;
+        }
+        .header-toggle-bar button {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 16px;
+            cursor: pointer;
+            border-radius: 0 0 10px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .header-toggle-bar button:hover {
+            background-color: rgba(255,255,255,0.15);
         }
         .github-link {
             display: inline-flex;
@@ -833,6 +868,9 @@
                 <label title="Also overlay this same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads"><input type="checkbox" id="alsoOverrideWildcard" onchange="alsoOverrideWildcard = this.checked;"> Also override WILDCARD</label>
             </div>
         </div>
+        <div id="headerToggleBar" class="header-toggle-bar">
+            <button id="headerToggleBtn" title="Hide the top menus" onclick="toggleHeaderBars()">▲ Hide menus</button>
+        </div>
         <div id="tableContainer"></div>
         
     </div>
@@ -1026,6 +1064,7 @@
                     <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb. Asks whether the target phone is a Pixel 7/8 first, and sets the BM 65k patch accordingly before downloading.</li>
                     <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone. Asks the same Pixel 7/8 question first.</li>
                     <li><b>Also override WILDCARD</b> — when checked, the generated zip also overlays the same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads.</li>
+                    <li><b>▲ Hide menus / ▾ Show menus</b> — slides both top bars out of view to leave more room for the combo table, leaving just this small tab to bring them back.</li>
                     <li><b>Clear session</b> — wipes the locally stored session and reloads the page.</li>
                     <li><b>View on GitHub</b> — opens the project's source code repository.</li>
                 </ul>
@@ -1802,11 +1841,47 @@
         function syncLoadedControlsBarOffset() {
             const mainHeader = document.getElementById("mainHeader");
             const loadedBar = document.getElementById("loadedControlsBar");
-            if (mainHeader && loadedBar) {
-                loadedBar.style.top = mainHeader.offsetHeight + "px";
+            const toggleBar = document.getElementById("headerToggleBar");
+            if (!mainHeader || !loadedBar) return;
+            loadedBar.style.top = mainHeader.offsetHeight + "px";
+            if (toggleBar) {
+                const loadedBarHeight = loadedBar.style.display === "none" ? 0 : loadedBar.offsetHeight;
+                toggleBar.style.top = (mainHeader.offsetHeight + loadedBarHeight) + "px";
             }
         }
         window.addEventListener("resize", syncLoadedControlsBarOffset);
+
+        // Slides the main header and loaded-profile bar out of view so more of
+        // the table is visible, leaving just the small toggle tab to bring them
+        // back. Uses scrollHeight (unaffected by max-height clipping) so the
+        // toggle tab's own slide stays in sync with the headers' collapse
+        // animation instead of jumping once it finishes.
+        let headerBarsCollapsed = false;
+        function toggleHeaderBars() {
+            headerBarsCollapsed = !headerBarsCollapsed;
+            const mainHeader = document.getElementById("mainHeader");
+            const loadedBar = document.getElementById("loadedControlsBar");
+            const toggleBar = document.getElementById("headerToggleBar");
+            const btn = document.getElementById("headerToggleBtn");
+
+            mainHeader.classList.toggle("collapsed", headerBarsCollapsed);
+            loadedBar.classList.toggle("collapsed", headerBarsCollapsed);
+
+            if (toggleBar) {
+                if (headerBarsCollapsed) {
+                    toggleBar.style.top = "0px";
+                } else {
+                    const loadedBarVisible = loadedBar.style.display !== "none";
+                    const targetHeight = mainHeader.scrollHeight + (loadedBarVisible ? loadedBar.scrollHeight : 0);
+                    toggleBar.style.top = targetHeight + "px";
+                }
+            }
+
+            if (btn) {
+                btn.textContent = headerBarsCollapsed ? "▾ Show menus" : "▲ Hide menus";
+                btn.title = headerBarsCollapsed ? "Show the top menus" : "Hide the top menus";
+            }
+        }
 
         // The Band/BW/F#/DL/UL title bar lives outside the combo table (so it
         // isn't nested inside the first combo's own card), so it has no
@@ -3295,6 +3370,7 @@
         window.addEventListener('load', function() {
             //loadTableData(); // Load saved data from localStorage when the page is loaded
             loadFromLocalStorage();
+            syncLoadedControlsBarOffset(); // position the header-toggle tab even if no session was restored
         });
 
         // Function to update filename
