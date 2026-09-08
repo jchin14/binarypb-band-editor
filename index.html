@@ -169,6 +169,18 @@
         .combo-table tr {
             line-height: 1.15;
         }
+        /* Same band repeated back-to-back (e.g. 10x n258 100MHz mmWave CCs)
+           represents contiguous channels of one aggregated block, not a
+           separate band - mark that shared edge dotted instead of the
+           default solid row divider. Both sides must agree on the style
+           since border-collapse resolves a solid/dotted conflict in favor
+           of solid. */
+        .combo-table tr.cc-contiguous > td {
+            border-top-style: dotted;
+        }
+        .combo-table tr:has(+ tr.cc-contiguous) > td {
+            border-bottom-style: dotted;
+        }
         .cc-index {
             display: inline-block;
             min-width: 12px;
@@ -556,6 +568,12 @@
         .patch-hint-caution {
             color: light-dark(#b91c1c, #f87171);
         }
+        .imported-file-info {
+            font-size: 11px;
+            font-style: italic;
+            opacity: 0.75;
+            white-space: nowrap;
+        }
         .zip-entry-list {
             display: flex;
             flex-direction: column;
@@ -875,12 +893,14 @@
                 </select>
             </div>
             <div id="recompileBtn">
-                <label for="filenameInput">Filename:</label>
+                <label for="filenameInput">Carrier:</label>
                 <input type="text" id="filenameInput" value="" onchange="updateFilename(this.value)">
-                <label for="moduleVersionInput">Version:</label>
+                <label for="moduleVersionInput">Mod Name:</label>
                 <input type="text" id="moduleVersionInput" value="" oninput="moduleVersionEdited = true;" title="Used as the Magisk module version and the downloaded zip's filename suffix. Defaults to the current date/time; edit to set a custom value.">
+                <span id="importedFileInfo" class="imported-file-info" hidden></span>
                 <button title="Download the compiled binarypb file" onclick="dlProtobuf()">↓ .binarypb</button>
                 <button title="Download the generated Magisk zip"onclick="createZipWithSubdirectories()">↓ .zip</button>
+                <label title="When checked, both download buttons export every open profile tab. Otherwise they export only the current tab."><input type="checkbox" id="exportAllProfiles" onchange="exportAllProfiles = this.checked;"> Include all profile tabs</label>
                 <label title="Also overlay this same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads"><input type="checkbox" id="alsoOverrideWildcard" onchange="alsoOverrideWildcard = this.checked;"> Also override WILDCARD</label>
             </div>
         </div>
@@ -1022,11 +1042,14 @@
 
     <div id="zipEntryModal" class="modal">
         <div class="modal-content">
-            <h3>Choose a profile</h3>
-            <p>This zip contains multiple .binarypb files. Pick which one to open.</p>
+            <h3>Import profiles from ZIP</h3>
+            <p>Select the `.binarypb` profiles to add to this workspace.</p>
             <div id="zipEntryList" class="zip-entry-list"></div>
             <div style="margin-top: 12px; text-align: right;">
+                <button class="modalbtn" id="zipEntrySelectAllBtn">Select all</button>
+                <button class="modalbtn" id="zipEntryDeselectAllBtn">Deselect all</button>
                 <button class="modalbtn" id="zipEntryCancelBtn">Cancel</button>
+                <button class="modalbtn" id="zipEntryImportBtn">Import selected</button>
             </div>
         </div>
     </div>
@@ -1076,8 +1099,8 @@
                     <li><b>Clear</b> — reset the band filter.</li>
                     <li><b>4G / 5G</b> — filter combos by network type (this format only ever encodes LTE and NR, so no 2G/3G option exists).</li>
                     <li><b>« Prev / Next »</b> — jump straight to the first or last page, or step one page at a time. <b>Per page</b> controls how many combos are shown at once (including an "all rows" option for large profiles).</li>
-                    <li><b>Filename</b> — sets the output filename used by the download buttons. Enter multiple names separated by <code>;</code> (e.g. <code>TELSTRA;OPTUS</code>) to produce several identically-contented .binarypb files — as separate downloads for ↓ .binarypb, or bundled together in one zip for ↓ .zip.</li>
-                    <li><b>Version</b> — sets the Magisk module's <code>version</code> and the downloaded zip's filename suffix. Defaults to the current date/time and refreshes automatically until you edit it, after which your custom value is used instead.</li>
+                    <li><b>Carrier</b> — sets the output filename used by the download buttons. Enter multiple names separated by <code>;</code> (e.g. <code>TELSTRA;OPTUS</code>) to produce several identically-contented .binarypb files — as separate downloads for ↓ .binarypb, or bundled together in one zip for ↓ .zip. If the currently active profile was imported from a file, its original filename is shown next to these fields.</li>
+                    <li><b>Mod Name</b> — sets the Magisk module's <code>version</code> and the downloaded zip's filename suffix. Defaults to the current date/time and refreshes automatically until you edit it, after which your custom value is used instead.</li>
                     <li><b>↓ .binarypb</b> — download the edited file as a raw .binarypb. Asks whether the target phone is a Pixel 7/8 first, and sets the BM 65k patch accordingly before downloading.</li>
                     <li><b>↓ .zip</b> — download a Magisk module zip that overlays the edited .binarypb on your phone. Asks the same Pixel 7/8 question first.</li>
                     <li><b>Also override WILDCARD</b> — when checked, the generated zip also overlays the same edited profile onto WILDCARD.binarypb (the catch-all fallback profile), so it applies regardless of which profile the phone actually loads.</li>
@@ -1543,6 +1566,7 @@
         let bandFilter = "";
         let ulOnlyFilter = false;
         let alsoOverrideWildcard = false;
+        let exportAllProfiles = false;
         let moduleVersionEdited = false;
         let ratFilter = { '4G': true, '5G': true };
 
@@ -1562,6 +1586,11 @@
         let filteredGroups = [];
         let globalIndexMap = []; // Stores correct indices after filtering & pagination
         let selectedCombos = new Set();
+        // A structural edit can make a combo stop matching an exact active
+        // filter (for example, n78 becomes n78+n78). Keep that just-edited
+        // combo visible until the user changes the filter, rather than making
+        // it look as though the edit deleted the combo.
+        let filterVisibleEditedCombos = new Set();
         let profiles = [];
         let activeProfileId = null;
         let nextProfileId = 1;
@@ -1594,6 +1623,7 @@
             if (!profile) return;
             profile.data = decodedData;
             profile.filename = originalFilename;
+            profile.importedFilename = importedFilename;
             profile.selectedCombos = new Set(selectedCombos);
         }
 
@@ -1604,28 +1634,33 @@
             activeProfileId = profile.id;
             decodedData = profile.data;
             originalFilename = profile.filename;
+            importedFilename = profile.importedFilename;
             selectedCombos = new Set(profile.selectedCombos || []);
             currentPage = 1;
             document.getElementById("filenameInput").value = originalFilename;
+            updateImportedFileDisplay();
             bitMaskToggled = profileHasBitMask(profile.data);
             generateTable(decodedData);
         }
 
-        function addProfileToWorkspace(data, filename) {
+        function addProfileToWorkspace(data, filename, sourceFilename) {
             rememberActiveProfile();
             const profile = {
                 id: nextProfileId++,
                 data,
                 filename: profileFilename(filename),
+                importedFilename: sourceFilename,
                 selectedCombos: new Set()
             };
             profiles.push(profile);
             activeProfileId = profile.id;
             decodedData = profile.data;
             originalFilename = profile.filename;
+            importedFilename = profile.importedFilename;
             selectedCombos = new Set();
             currentPage = 1;
             document.getElementById("filenameInput").value = originalFilename;
+            updateImportedFileDisplay();
             bitMaskToggled = profileHasBitMask(profile.data);
             generateTable(decodedData);
         }
@@ -1645,9 +1680,11 @@
                     activeProfileId = null;
                     decodedData = undefined;
                     originalFilename = undefined;
+                    importedFilename = undefined;
                     selectedCombos = new Set();
                     document.getElementById("tableContainer").innerHTML = "";
                     document.getElementById("loadedControlsBar").style.display = "none";
+                    updateImportedFileDisplay();
                     renderProfileTabs();
                     syncLoadedControlsBarOffset();
                 }
@@ -1815,7 +1852,11 @@
                         // 0 is NR, 1 is LTE (Later on LTE DL = 1, LTE UL = 2)
                         let ran = (ccItem.band > 10000) ? 0 : 1;
                         let isMmwave = ran === 0 && (ccItem.band - 10000) > 250; // anything above n250 is FR2/mmWave
-                        let rowClass = (isMmwave ? "ran-mmwave" : (ran === 0 ? "ran-nr" : "ran-lte")) + (hasUlFeature ? " color-row" : ""); // Tint by RAN type, highlight if ulFeaturePerCCIds exists
+                        // Same band repeated back-to-back represents multiple contiguous
+                        // channels of one aggregated block (e.g. Telstra's 10x n258 100MHz
+                        // mmWave carrier) rather than a separate distinct band.
+                        let isContiguousChannel = ccIndex > 0 && combo.cc[ccIndex - 1].band === ccItem.band;
+                        let rowClass = (isMmwave ? "ran-mmwave" : (ran === 0 ? "ran-nr" : "ran-lte")) + (hasUlFeature ? " color-row" : "") + (isContiguousChannel ? " cc-contiguous" : ""); // Tint by RAN type, highlight if ulFeaturePerCCIds exists
 
                         let bandInput = `<span class="cc-index">${ccIndex + 1}</span><input name="band-input" type="text" class="band-input" value="${bandParseInt(ccItem.bwClassDL,ccItem.band)}"
                             onchange="updateBand(${realGroupIndex}, ${localComboIndex}, ${ccIndex}, this.value)" />`;
@@ -2234,7 +2275,10 @@
             const originCombo = decodedData.ComboGroups[groupIndex].combo[comboIndex];
             originCombo.cc.push(newDefaultBand());
 
-            getOtherSelectedCombos(originCombo).forEach(combo => combo.cc.push(newDefaultBand()));
+            const otherSelectedCombos = getOtherSelectedCombos(originCombo);
+            otherSelectedCombos.forEach(combo => combo.cc.push(newDefaultBand()));
+            filterVisibleEditedCombos.add(originCombo);
+            otherSelectedCombos.forEach(combo => filterVisibleEditedCombos.add(combo));
 
             generateTable(decodedData);
         }
@@ -2276,6 +2320,7 @@
 
         document.getElementById("bandFilterInput").addEventListener("input", function() {
             bandFilter = this.value.trim(); // Update filter value
+            filterVisibleEditedCombos.clear();
             generateTable(decodedData); // Regenerate the table immediately
         });
 
@@ -2284,7 +2329,9 @@
             if (!expr) return comboGroups; // No filter applied
 
             return comboGroups.filter(group =>
-                group.combo.some(combo => comboMatchesFilterExpression(combo, expr))
+                group.combo.some(combo =>
+                    comboMatchesFilterExpression(combo, expr) || filterVisibleEditedCombos.has(combo)
+                )
             );
         }
 
@@ -3053,6 +3100,23 @@
         // File handling and recompile functions
         let decodedData;
         let originalFilename;
+        // The raw filename a profile was imported from (with extension, before
+        // any renaming), so it stays visible even after the Carrier field is
+        // edited. Left unset for profiles that were never imported (e.g. "+ New
+        // profile"), in which case nothing is shown.
+        let importedFilename;
+
+        function updateImportedFileDisplay() {
+            const el = document.getElementById("importedFileInfo");
+            if (!el) return;
+            if (importedFilename) {
+                el.textContent = `Imported: ${importedFilename}`;
+                el.hidden = false;
+            } else {
+                el.textContent = "";
+                el.hidden = true;
+            }
+        }
 
         function loadBinaryPbBuffer(buffer, filename, { separate = false } = {}) {
             try {
@@ -3061,16 +3125,19 @@
                 processDecodedMessage(loadedData);
                 const loadedFilename = profileFilename(filename);
                 if (separate || !activeProfile()) {
-                    addProfileToWorkspace(loadedData, loadedFilename);
+                    addProfileToWorkspace(loadedData, loadedFilename, filename);
                 } else {
                     decodedData = loadedData;
                     originalFilename = loadedFilename;
+                    importedFilename = filename;
                     selectedCombos = new Set();
                     const profile = activeProfile();
                     profile.data = decodedData;
                     profile.filename = originalFilename;
+                    profile.importedFilename = importedFilename;
                     profile.selectedCombos = selectedCombos;
                     document.getElementById("filenameInput").value = originalFilename;
+                    updateImportedFileDisplay();
                     bitMaskToggled = profileHasBitMask(decodedData);
                     generateTable(decodedData);
                 }
@@ -3079,52 +3146,69 @@
             }
         }
 
-        // Shows the zip-entry picker modal and resolves with the chosen entry,
-        // or null if the user cancels.
-        function pickZipEntry(entries) {
+        // Shows the ZIP picker and resolves with every checked entry, or an
+        // empty array if the user cancels.
+        function pickZipEntries(entries) {
             return new Promise(resolve => {
                 const modal = document.getElementById('zipEntryModal');
                 const list = document.getElementById('zipEntryList');
                 list.innerHTML = '';
                 entries.forEach(entry => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'modalbtn';
-                    btn.textContent = entry.name.split('/').pop();
-                    btn.onclick = () => {
-                        modal.style.display = 'none';
-                        resolve(entry);
-                    };
-                    list.appendChild(btn);
+                    const label = document.createElement('label');
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                    label.style.gap = '8px';
+                    label.style.padding = '6px 0';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = entry.name;
+                    checkbox.checked = true;
+                    const name = document.createElement('span');
+                    name.textContent = entry.name.split('/').pop();
+                    label.append(checkbox, name);
+                    list.appendChild(label);
                 });
+                const checkboxes = () => [...list.querySelectorAll('input[type="checkbox"]')];
+                document.getElementById('zipEntrySelectAllBtn').onclick = () => checkboxes().forEach(box => box.checked = true);
+                document.getElementById('zipEntryDeselectAllBtn').onclick = () => checkboxes().forEach(box => box.checked = false);
+                document.getElementById('zipEntryImportBtn').onclick = () => {
+                    const selectedNames = new Set(checkboxes().filter(box => box.checked).map(box => box.value));
+                    modal.style.display = 'none';
+                    resolve(entries.filter(entry => selectedNames.has(entry.name)));
+                };
                 document.getElementById('zipEntryCancelBtn').onclick = () => {
                     modal.style.display = 'none';
-                    resolve(null);
+                    resolve([]);
                 };
                 modal.style.display = 'block';
             });
         }
 
-        // Reads a .binarypb file, or pulls one out of a Magisk module .zip
-        // (prompting for which one if the zip carries more than one, e.g. a
-        // multi-carrier bundle).
-        async function extractBinaryPbBytes(file) {
+        // Reads one or more .binarypb files. ZIP files use the picker above;
+        // a plain .binarypb is returned as a single-entry array.
+        async function extractBinaryPbEntries(file) {
             if (file.name.toLowerCase().endsWith('.zip')) {
                 const zip = await JSZip.loadAsync(file);
                 const entries = Object.values(zip.files).filter(f =>
                     !f.dir && f.name.toLowerCase().endsWith('.binarypb')
                 );
                 if (entries.length === 0) throw new Error("No .binarypb file found inside this zip.");
-                let entry = entries[0];
-                if (entries.length > 1) {
-                    entry = await pickZipEntry(entries);
-                    if (!entry) throw new Error("No file was chosen from the zip.");
-                }
-                const buffer = await entry.async('arraybuffer');
-                return { buffer, filename: entry.name.split('/').pop() };
+                const selected = entries.length > 1 ? await pickZipEntries(entries) : entries;
+                if (selected.length === 0) throw new Error("No profiles were selected from the zip.");
+                return Promise.all(selected.map(async entry => ({
+                    buffer: await entry.async('arraybuffer'),
+                    filename: entry.name.split('/').pop()
+                })));
             }
             const buffer = await file.arrayBuffer();
-            return { buffer, filename: file.name };
+            return [{ buffer, filename: file.name }];
+        }
+
+        // Comparison and merge flows require exactly one source profile.
+        async function extractBinaryPbBytes(file) {
+            const entries = await extractBinaryPbEntries(file);
+            if (entries.length !== 1) throw new Error("Select exactly one profile for this action.");
+            return entries[0];
         }
 
         function startNewProfile() {
@@ -3252,13 +3336,27 @@
         document.getElementById('fileInput').addEventListener('change', async function(event) {
             const file = event.target.files[0];
             if (!file) return;
+            let entries;
+            try {
+                entries = await extractBinaryPbEntries(file);
+            } catch (error) {
+                alert("Failed to load file: " + error.message);
+                document.getElementById('fileInput').value = '';
+                return;
+            }
+            if (entries.length > 1) {
+                entries.forEach(({ buffer, filename }) => loadBinaryPbBuffer(buffer, filename, { separate: true }));
+                document.getElementById('fileInput').value = '';
+                return;
+            }
+            const entry = entries[0];
             if (activeProfile()) {
-                pendingLoad = () => extractBinaryPbBytes(file);
+                pendingLoad = () => Promise.resolve(entry);
                 document.getElementById('loadModeModal').style.display = 'block';
                 return;
             }
             try {
-                const { buffer, filename } = await extractBinaryPbBytes(file);
+                const { buffer, filename } = entry;
                 loadBinaryPbBuffer(buffer, filename);
             } catch (error) {
                 alert("Failed to load file: " + error.message);
@@ -3410,16 +3508,36 @@
             return new Blob([buffer], { type: "application/octet-stream" });
         }
 
+        function outputProfilesForExport({ includeWildcard = false } = {}) {
+            const sourceProfiles = exportAllProfiles ? profiles : [activeProfile()].filter(Boolean);
+            const outputProfiles = sourceProfiles.flatMap(profile =>
+                parseFilenameList(profile.filename).map(name => ({ name, data: profile.data }))
+            );
+            if (includeWildcard && alsoOverrideWildcard && !outputProfiles.some(profile => profile.name.toUpperCase() === "WILDCARD")) {
+                outputProfiles.push({ name: "WILDCARD", data: decodedData });
+            }
+            const duplicateNames = outputProfiles
+                .map(profile => profile.name.toUpperCase())
+                .filter((name, index, names) => names.indexOf(name) !== index);
+            if (duplicateNames.length > 0) {
+                alert(`Each exported profile needs a unique filename. Duplicate: ${[...new Set(duplicateNames)].join(", ")}`);
+                return null;
+            }
+            return outputProfiles;
+        }
+
         async function dlProtobuf() {
-            await confirmBitMaskForDownload();
-            const url = URL.createObjectURL(recompileProtobuf());
-            parseFilenameList(originalFilename).forEach(name => {
+            const outputProfiles = outputProfilesForExport();
+            if (!outputProfiles || outputProfiles.length === 0) return;
+            await confirmBitMaskForDownload({ allProfiles: exportAllProfiles });
+            outputProfiles.forEach(profile => {
+                const url = URL.createObjectURL(recompileProtobuf(profile.data));
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `mod_${name}.binarypb`;
+                link.download = `mod_${profile.name}.binarypb`;
                 link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 0);
             });
-            URL.revokeObjectURL(url);
         }
 
         let clearSessionFlag = false;
@@ -3450,7 +3568,7 @@
             rememberActiveProfile();
             const workspace = {
                 activeProfileId,
-                profiles: profiles.map(profile => ({ id: profile.id, filename: profile.filename, data: profile.data }))
+                profiles: profiles.map(profile => ({ id: profile.id, filename: profile.filename, importedFilename: profile.importedFilename, data: profile.data }))
             };
             localStorage.setItem('binarypbWorkspace', JSON.stringify(workspace, (key, value) =>
                 ArrayBuffer.isView(value) ? Array.from(value) : value
@@ -3480,6 +3598,7 @@
                             .map(profile => ({
                                 id: Number(profile.id),
                                 filename: profileFilename(profile.filename),
+                                importedFilename: profile.importedFilename,
                                 data: profile.data,
                                 selectedCombos: new Set()
                             }));
@@ -3490,8 +3609,10 @@
                             const profile = activeProfile();
                             decodedData = profile.data;
                             originalFilename = profile.filename;
+                            importedFilename = profile.importedFilename;
                             selectedCombos = new Set();
                             document.getElementById("filenameInput").value = originalFilename;
+                            updateImportedFileDisplay();
                             bitMaskToggled = profileHasBitMask(decodedData);
                             generateTable(decodedData);
                             return;
@@ -3523,7 +3644,7 @@
                 const decodedMessage = UeCaps.decode(binaryArray);
                 decodedData = UeCaps.toObject(decodedMessage, { defaults: true });
                 processDecodedMessage(decodedData);
-                addProfileToWorkspace(decodedData, originalFilename);
+                addProfileToWorkspace(decodedData, originalFilename, originalFilename);
                 console.log("Cache decoded successfully.");
             } catch (error) {
                 console.error("Error loading or decoding data:", error);
@@ -3573,7 +3694,9 @@
         
         async function createZipWithSubdirectories() {
             if (profiles.length === 0) return alert("Add at least one profile before exporting a module.");
-            await confirmBitMaskForDownload({ allProfiles: true });
+            const outputProfiles = outputProfilesForExport({ includeWildcard: true });
+            if (!outputProfiles || outputProfiles.length === 0) return;
+            await confirmBitMaskForDownload({ allProfiles: exportAllProfiles });
             let curr_time = document.getElementById("moduleVersionInput").value.replace(/[\\/\r\n]/g, "").trim() || getFormattedDate();
             // Create a new ZIP instance
             const zip = new JSZip();
@@ -3586,17 +3709,6 @@
             // Magisk update-binary base64
             const sampleBase64 = "IyEvc2Jpbi9zaAoKIyMjIyMjIyMjIyMjIyMjIyMKIyBJbml0aWFsaXphdGlvbgojIyMjIyMjIyMjIyMjIyMjIwoKdW1hc2sgMDIyCgojIGVjaG8gYmVmb3JlIGxvYWRpbmcgdXRpbF9mdW5jdGlvbnMKdWlfcHJpbnQoKSB7IGVjaG8gIiQxIjsgfQoKcmVxdWlyZV9uZXdfbWFnaXNrKCkgewogIHVpX3ByaW50ICIqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqIgogIHVpX3ByaW50ICIgUGxlYXNlIGluc3RhbGwgTWFnaXNrIHYyMC40KyEgIgogIHVpX3ByaW50ICIqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqIgogIGV4aXQgMQp9CgojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCiMgTG9hZCB1dGlsX2Z1bmN0aW9ucy5zaAojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCgpPVVRGRD0kMgpaSVBGSUxFPSQzCgptb3VudCAvZGF0YSAyPi9kZXYvbnVsbAoKWyAtZiAvZGF0YS9hZGIvbWFnaXNrL3V0aWxfZnVuY3Rpb25zLnNoIF0gfHwgcmVxdWlyZV9uZXdfbWFnaXNrCi4gL2RhdGEvYWRiL21hZ2lzay91dGlsX2Z1bmN0aW9ucy5zaApbICRNQUdJU0tfVkVSX0NPREUgLWx0IDIwNDAwIF0gJiYgcmVxdWlyZV9uZXdfbWFnaXNrCgppbnN0YWxsX21vZHVsZQpleGl0IDAK";
             
-            const outputProfiles = profiles.flatMap(profile => parseFilenameList(profile.filename).map(name => ({ name, data: profile.data })));
-            if (alsoOverrideWildcard && !outputProfiles.some(profile => profile.name.toUpperCase() === "WILDCARD")) {
-                outputProfiles.push({ name: "WILDCARD", data: decodedData });
-            }
-            const duplicateNames = outputProfiles
-                .map(profile => profile.name.toUpperCase())
-                .filter((name, index, names) => names.indexOf(name) !== index);
-            if (duplicateNames.length > 0) {
-                alert(`Each module profile needs a unique filename. Duplicate: ${[...new Set(duplicateNames)].join(", ")}`);
-                return;
-            }
             const targetNames = outputProfiles.map(profile => profile.name);
             const comboCount = outputProfiles.reduce((total, profile) => total + countCombos(profile.data.ComboGroups), 0);
 
@@ -3611,7 +3723,7 @@ version=${curr_time}
 versionCode=${(Date.now()).toString().slice(9)}
 author=jchin14
 description=https://github.com/jchin14/binarypb-band-editor - Replaces ${targetNames.join(", ")}, ${comboCount} combos. Generated with https://binarypb.jchin.au.
-support=https://github.com/jchin14/binarypb-band-editor`;
+support=https://binarypb.jchin.au`;
 
             // Convert base64 to binary
             const binaryData = atob(sampleBase64);
