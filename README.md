@@ -6,7 +6,7 @@
 
 **Wiki:** [Home](https://github.com/jchin14/binarypb-band-editor/wiki) · [Usage](https://github.com/jchin14/binarypb-band-editor/wiki/Usage) · [Search Syntax](https://github.com/jchin14/binarypb-band-editor/wiki/Search-Syntax) · [Rooted Workflow](https://github.com/jchin14/binarypb-band-editor/wiki/Rooted-Workflow) · [FAQ](https://github.com/jchin14/binarypb-band-editor/wiki/FAQ)
 
-A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is based on [Pixel PB](https://nxij.github.io/pixel-pb/) and adds stock carrier profile templates, bulk row/field editing, a boolean/wildcard search syntax, combo-text transfer between profiles, and a Magisk module export with an optional `WILDCARD.binarypb` overlay. See the [wiki](https://github.com/jchin14/binarypb-band-editor/wiki) for the full feature rundown, usage guide, and search syntax reference — or use the in-app **Help** button, which covers every button and field.
+A self-contained, browser-based editor for Pixel/Samsung `uecapconfig` `.binarypb` UE-capability profiles. It is based on [Pixel PB](https://nxij.github.io/pixel-pb/) and adds stock carrier profile templates, bulk row/field editing, a boolean/wildcard search syntax, combo-text transfer between profiles, and a Magisk module export with an optional `WILDCARD.binarypb` overlay. See the [wiki](https://github.com/jchin14/binarypb-band-editor/wiki) for the full feature rundown, usage guide, and search syntax reference, or use the in-app **Help** button, which covers every button and field.
 
 ## Disclaimer
 
@@ -29,16 +29,16 @@ Deploy the repository as a static site (the live editor is deployed on Vercel), 
 
 Open `index.html` in a modern desktop browser, then load a `.binarypb` using the file picker, or pick a stock profile from the dropdown. The editor has no server-side component; it runs entirely in the browser.
 
-> **Note:** the "Load stock profile" dropdown fetches files from `templates/`, which requires the page to be served over `http(s)://`. Opening `index.html` directly as a local `file://` page (double-clicking it) will fail to load stock profiles due to browser CORS restrictions on `fetch()` — file loading via the file picker still works fine either way. To test stock profiles locally, serve the directory with something like `python3 -m http.server` and open `http://localhost:<port>`.
+> **Note:** the "Load stock profile" dropdown fetches files from `templates/`, which requires the page to be served over `http(s)://`. Opening `index.html` directly as a local `file://` page (double-clicking it) will fail to load stock profiles due to browser CORS restrictions on `fetch()`, but file loading via the file picker still works fine either way. To test stock profiles locally, serve the directory with something like `python3 -m http.server` and open `http://localhost:<port>`.
 
-For how to use the editor day-to-day — selecting/editing/bulk-editing rows, the search syntax, exporting, and the rooted-phone install workflow — see the [wiki](https://github.com/jchin14/binarypb-band-editor/wiki).
+For how to use the editor day-to-day (selecting/editing/bulk-editing rows, the search syntax, exporting, and the rooted-phone install workflow), see the [wiki](https://github.com/jchin14/binarypb-band-editor/wiki).
 
 ## Important notes
 
 - Back up the original `.binarypb` before changing anything.
 - This editor changes UE capability advertisements; it cannot add RF hardware support or make a network schedule an unsupported CA combination.
 - Feature references and carrier-specific profile headers can matter. Test one small change at a time and keep a known-good recovery copy.
-- The bundled stock profile templates (Wildcard, Telstra, Optus, VHA) were pulled from a Pixel 7 Pro in Australia in August 2026. They may not match your device, carrier, or region, and may be outdated — use them at your own risk, and test thoroughly before relying on a patched phone in an emergency.
+- The bundled stock profile templates (Wildcard, Telstra, Optus, VHA) were pulled from a Pixel 7 Pro in Australia in August 2026. They may not match your device, carrier, or region, and may be outdated. Use them at your own risk, and test thoroughly before relying on a patched phone in an emergency.
 - This editor has only been tested on desktop browsers; mobile is not recommended.
 - This project is an independent wrapper/modification of Pixel PB. Refer to the upstream project for the underlying editor and format support.
 
