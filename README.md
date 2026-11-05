@@ -48,7 +48,7 @@ Pull requests are welcome. Please keep changes focused and describe what you tes
 
 ## License
 
-Source-available under PolyForm Noncommercial 1.0.0 (see `LICENSE.md`). This covers my changes only. The upstream [Pixel PB](https://github.com/NXij/pixel-pb) code stays under its author's terms.
+Source-available under PolyForm Noncommercial 1.0.0 (see `LICENSE.md`). This covers my changes only. The upstream [Pixel PB](https://github.com/NXij/pixel-pb) code stays under its author's terms. For commercial use, email [licensing@jchin.au](mailto:licensing@jchin.au) or [open an issue](https://github.com/jchin14/binarypb-band-editor/issues).
 
 ## Special thanks
 

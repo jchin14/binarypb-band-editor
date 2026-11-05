@@ -74,4 +74,4 @@ The **licensor** is the individual or entity offering these terms, and the **sof
 
 Required Notice: Copyright (c) 2026 Jonathan Chin (https://jchin.au)
 
-For commercial use, contact messageBae@jchin.au.
+For commercial use, email licensing@jchin.au or open an issue at https://github.com/jchin14/binarypb-band-editor/issues.
