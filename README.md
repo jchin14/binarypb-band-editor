@@ -46,6 +46,10 @@ For how to use the editor day-to-day — selecting/editing/bulk-editing rows, th
 
 Pull requests are welcome. Please keep changes focused and describe what you tested.
 
+## License
+
+Source-available under PolyForm Noncommercial 1.0.0 (see `LICENSE.md`). This covers my changes only. The upstream [Pixel PB](https://github.com/NXij/pixel-pb) code stays under its author's terms.
+
 ## Special thanks
 
 Special thanks to [nxij](https://github.com/nxij), the original author of Pixel PB, for creating and open-sourcing the editor this project builds on.
